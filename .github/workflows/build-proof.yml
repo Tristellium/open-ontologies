@@ -1,0 +1,41 @@
+# build-proof.yml — the fork build proof: ONE clean-room build of this fork at the
+# pinned ref, on a fresh runner, with the artifact + sha256 uploaded for the local
+# proof battery (census-at-pin · partition test · driver gauntlet) to verify.
+# The build capability this proves is the abandonment mitigation: the fork owner can
+# produce the pinned artifact without upstream.
+name: build-proof
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "ref/tag to build (the pin)"
+        required: true
+        default: "v1.0.0"
+
+jobs:
+  build:
+    runs-on: macos-14 # darwin-arm64, matching the consuming machine
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: toolchain (clean-room runner state, recorded)
+        run: |
+          rustup show
+          cargo --version
+          sw_vers
+      - name: build (locked, default features — the pinned artifact's shape)
+        run: cargo build --release --locked
+      - name: stamp
+        run: |
+          BIN=target/release/open-ontologies
+          file "$BIN"
+          shasum -a 256 "$BIN" | tee sha256.txt
+          "$BIN" --help | head -3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-ontologies-${{ inputs.ref }}-darwin-arm64
+          path: |
+            target/release/open-ontologies
+            sha256.txt
+          if-no-files-found: error
