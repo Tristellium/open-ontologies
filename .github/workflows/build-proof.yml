@@ -1,0 +1,49 @@
+# build-proof.yml — practice builds of this fork at a pinned ref (source-first supply
+# chain): fresh-runner clean-room builds for every pinned platform, sha256-stamped
+# artifacts. The consuming platform re-pins its checker table to THESE artifacts and
+# proves them through its full local battery (census-at-pin · partition · gauntlet ·
+# scale) — byte-trust flows from source we hold, never from upstream binaries.
+name: build-proof
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "ref/tag to build (the pin)"
+        required: true
+        default: "v1.0.0"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            triple: aarch64-apple-darwin
+          - runner: macos-13
+            triple: x86_64-apple-darwin
+          - runner: ubuntu-22.04
+            triple: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - name: toolchain (clean-room runner state, recorded)
+        run: |
+          rustup show
+          cargo --version
+      - name: build (locked, default features — the pinned artifact's shape)
+        run: cargo build --release --locked
+      - name: stamp
+        run: |
+          BIN=target/release/open-ontologies
+          file "$BIN"
+          if command -v sha256sum >/dev/null 2>&1; then sha256sum "$BIN" | tee sha256.txt; else shasum -a 256 "$BIN" | tee sha256.txt; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: open-ontologies-${{ inputs.ref }}-${{ matrix.triple }}
+          path: |
+            target/release/open-ontologies
+            sha256.txt
+          if-no-files-found: error
