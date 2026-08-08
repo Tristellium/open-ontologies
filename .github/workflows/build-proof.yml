@@ -18,12 +18,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # x86_64-apple-darwin CROSS-COMPILES from the arm64 runner: the macos-13
+          # intel pool is deprecated and starves in queue (a dispatched job sat
+          # unallocated 50+ min on 2026-08-08); Apple Silicon runners carry the
+          # universal SDK, so --target is the reliable route to the intel slice.
           - runner: macos-14
             triple: aarch64-apple-darwin
-          - runner: macos-13
+            target: ""
+          - runner: macos-14
             triple: x86_64-apple-darwin
+            target: x86_64-apple-darwin
           - runner: ubuntu-22.04
             triple: x86_64-unknown-linux-gnu
+            target: ""
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -33,17 +40,25 @@ jobs:
         run: |
           rustup show
           cargo --version
+          if [ -n "${{ matrix.target }}" ]; then rustup target add "${{ matrix.target }}"; fi
       - name: build (locked, default features — the pinned artifact's shape)
-        run: cargo build --release --locked
+        run: |
+          if [ -n "${{ matrix.target }}" ]; then
+            cargo build --release --locked --target "${{ matrix.target }}"
+            cp "target/${{ matrix.target }}/release/open-ontologies" target/release-bin
+          else
+            cargo build --release --locked
+            cp target/release/open-ontologies target/release-bin
+          fi
       - name: stamp
         run: |
-          BIN=target/release/open-ontologies
+          BIN=target/release-bin
           file "$BIN"
           if command -v sha256sum >/dev/null 2>&1; then sha256sum "$BIN" | tee sha256.txt; else shasum -a 256 "$BIN" | tee sha256.txt; fi
       - uses: actions/upload-artifact@v4
         with:
           name: open-ontologies-${{ inputs.ref }}-${{ matrix.triple }}
           path: |
-            target/release/open-ontologies
+            target/release-bin
             sha256.txt
           if-no-files-found: error
