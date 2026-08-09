@@ -1,16 +1,25 @@
-# build-proof.yml — practice builds of this fork at a pinned ref (source-first supply
-# chain): fresh-runner clean-room builds for every pinned platform, sha256-stamped
-# artifacts. The consuming platform re-pins its checker table to THESE artifacts and
-# proves them through its full local battery (census-at-pin · partition · gauntlet ·
-# scale) — byte-trust flows from source we hold, never from upstream binaries.
+# build-proof.yml — the source-first release chain. Fresh-runner clean-room builds of
+# this fork at a pinned ref for every consuming platform, then CI ITSELF publishes the
+# exact tested artifacts to a fork release, emits a machine-readable provenance
+# manifest (tag · source commit · run id · per-platform digest+size+runner), and
+# re-downloads the published assets to re-hash them as a POST-RELEASE check. The
+# consuming platform pins to THESE artifacts. No human upload step — the hand-upload
+# path is what corrupted v1.0.0-practice.1 (review finding R2-001).
 name: build-proof
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "ref/tag to build (the pin)"
+        description: "source ref/tag to build (the pin)"
         required: true
         default: "v1.0.0"
+      release_tag:
+        description: "fork release tag to publish (e.g. v1.0.0-practice.2)"
+        required: true
+        default: "v1.0.0-practice.2"
+
+permissions:
+  contents: write # the release job creates the tag + release and uploads assets
 
 jobs:
   build:
@@ -18,10 +27,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x86_64-apple-darwin CROSS-COMPILES from the arm64 runner: the macos-13
-          # intel pool is deprecated and starves in queue (a dispatched job sat
-          # unallocated 50+ min on 2026-08-08); Apple Silicon runners carry the
-          # universal SDK, so --target is the reliable route to the intel slice.
           - runner: macos-14
             triple: aarch64-apple-darwin
             target: ""
@@ -40,25 +45,87 @@ jobs:
         run: |
           rustup show
           cargo --version
+          echo "runner=${{ matrix.runner }}" > runner.txt
           if [ -n "${{ matrix.target }}" ]; then rustup target add "${{ matrix.target }}"; fi
-      - name: build (locked, default features — the pinned artifact's shape)
+      - name: build (locked, default features)
         run: |
           if [ -n "${{ matrix.target }}" ]; then
             cargo build --release --locked --target "${{ matrix.target }}"
-            cp "target/${{ matrix.target }}/release/open-ontologies" target/release-bin
+            cp "target/${{ matrix.target }}/release/open-ontologies" "open-ontologies-${{ matrix.triple }}"
           else
             cargo build --release --locked
-            cp target/release/open-ontologies target/release-bin
+            cp target/release/open-ontologies "open-ontologies-${{ matrix.triple }}"
           fi
-      - name: stamp
+      - name: stamp (sha256 + size + platform, one JSON line)
         run: |
-          BIN=target/release-bin
-          file "$BIN"
-          if command -v sha256sum >/dev/null 2>&1; then sha256sum "$BIN" | tee sha256.txt; else shasum -a 256 "$BIN" | tee sha256.txt; fi
+          BIN="open-ontologies-${{ matrix.triple }}"
+          if command -v sha256sum >/dev/null 2>&1; then SHA=$(sha256sum "$BIN" | awk '{print $1}'); else SHA=$(shasum -a 256 "$BIN" | awk '{print $1}'); fi
+          SIZE=$(wc -c < "$BIN" | tr -d ' ')
+          printf '{"triple":"%s","sha256":"%s","size":%s,"runner":"%s"}\n' \
+            "${{ matrix.triple }}" "$SHA" "$SIZE" "${{ matrix.runner }}" > "prov-${{ matrix.triple }}.json"
+          cat "prov-${{ matrix.triple }}.json"
       - uses: actions/upload-artifact@v4
         with:
-          name: open-ontologies-${{ inputs.ref }}-${{ matrix.triple }}
+          name: asset-${{ matrix.triple }}
           path: |
-            target/release-bin
-            sha256.txt
+            open-ontologies-${{ matrix.triple }}
+            prov-${{ matrix.triple }}.json
           if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+      - name: assemble assets + provenance manifest
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp dl/asset-*/open-ontologies-* out/
+          ( cd out && sha256sum open-ontologies-* > SHA256SUMS.txt )
+          cat out/SHA256SUMS.txt
+          SRC_COMMIT="$(git rev-parse HEAD)"
+          # merge the per-platform provenance fragments into ONE manifest
+          PLATFORMS="$(cat dl/asset-*/prov-*.json | paste -sd, -)"
+          cat > out/provenance.json <<JSON
+          {
+            "release_tag": "${{ inputs.release_tag }}",
+            "source_ref": "${{ inputs.ref }}",
+            "source_commit": "$SRC_COMMIT",
+            "run_id": "${{ github.run_id }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "built_by": "build-proof workflow (source-first, cargo --release --locked, default features)",
+            "platforms": [ $PLATFORMS ]
+          }
+          JSON
+          cat out/provenance.json
+      - name: publish the release (CI is the only publisher)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.release_tag }}"
+          # recreate cleanly so a re-run cannot leave stale/corrupt assets
+          gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" --repo "${{ github.repository }}" \
+            --target "$(git rev-parse HEAD)" \
+            --title "$TAG (source-first, CI-published)" \
+            --notes "Built from ${{ inputs.ref }} by run ${{ github.run_id }}. Provenance: provenance.json. Post-release re-hash verified in the same run." \
+            out/open-ontologies-* out/SHA256SUMS.txt out/provenance.json
+      - name: POST-RELEASE re-hash check (download what we just published, compare)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.release_tag }}"
+          mkdir -p verify && cd verify
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern 'open-ontologies-*'
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern 'SHA256SUMS.txt'
+          # the published SHA256SUMS must match the just-downloaded bytes, exactly
+          sha256sum -c SHA256SUMS.txt
+          echo "POST-RELEASE CHECK GREEN — every published asset re-hashes to its manifest digest"
