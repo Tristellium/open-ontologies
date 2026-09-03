@@ -118,15 +118,47 @@ fn clear_stale_port(port: u16) {
     }
 }
 
+// Kept in sync by hand with the matching ENGINE_PORT constant in
+// sidecars/agent/index.ts (`const ENGINE_PORT = process.env.OPEN_ONTOLOGIES_STUDIO_PORT ?? '8137'`).
+// That copy is a fallback for running the sidecar standalone; in the normal
+// path this Rust value always wins because spawn_agent_sidecar sets
+// OPEN_ONTOLOGIES_STUDIO_PORT before the sidecar ever reads it, so the two
+// never need to agree at runtime, only in source.
+const DEFAULT_ENGINE_PORT: u16 = 8137;
+
+fn parse_port(raw: Option<&str>) -> u16 {
+    raw.and_then(|value| value.trim().parse::<u16>().ok())
+        .filter(|port| *port != 0)
+        .unwrap_or(DEFAULT_ENGINE_PORT)
+}
+
+/// Single source of truth for the engine's HTTP port. Every consumer of the
+/// port (the REST base URL handed to the frontend, the MCP endpoint the
+/// backend calls, and the environment variable passed to the agent sidecar)
+/// derives its value from this function rather than resolving it again.
+pub(crate) fn engine_port() -> u16 {
+    let raw = std::env::var("OPEN_ONTOLOGIES_STUDIO_PORT").ok();
+    parse_port(raw.as_deref())
+}
+
+/// Exposes the resolved engine port to the frontend so it does not need its
+/// own copy of the port-resolution logic (and cannot drift from Rust's view
+/// of it).
+#[tauri::command]
+pub fn get_engine_port() -> u16 {
+    engine_port()
+}
+
 pub fn spawn_engine(app: &tauri::AppHandle) -> Result<(), String> {
     let binary = resolve_engine_binary()?;
-    clear_stale_port(8080);
+    let port = engine_port();
+    clear_stale_port(port);
     std::thread::sleep(std::time::Duration::from_millis(300));
 
     eprintln!("[engine] spawning {}", binary.display());
 
     let mut child = Command::new(&binary)
-        .args(["serve-http", "--port", "8080"])
+        .args(["serve-http", "--port", &port.to_string()])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -139,7 +171,7 @@ pub fn spawn_engine(app: &tauri::AppHandle) -> Result<(), String> {
         for line in reader.lines() {
             if let Ok(line) = line {
                 eprintln!("[engine] {}", line);
-                if line.contains("listening") || line.contains("Listening") || line.contains("8080")
+                if line.contains("listening") || line.contains("Listening") || line.contains(&port.to_string())
                 {
                     let _ = app_handle.emit("engine-ready", true);
                 }
@@ -158,4 +190,16 @@ pub fn spawn_engine(app: &tauri::AppHandle) -> Result<(), String> {
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn port_defaults_to_8137_and_never_to_8080() {
+        assert_eq!(parse_port(None), 8137);
+        assert_eq!(parse_port(Some("9001")), 9001);
+        assert_eq!(parse_port(Some("not-a-port")), 8137);
+    }
 }

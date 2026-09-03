@@ -213,6 +213,10 @@ impl OpenOntologiesServer {
 #[tool_router]
 impl OpenOntologiesServer {
 
+    fn err_json(msg: impl std::fmt::Display) -> String {
+        serde_json::json!({ "error": msg.to_string() }).to_string()
+    }
+
     // ── Status ──────────────────────────────────────────────────────────────
 
     #[tool(name = "onto_status", description = "Returns health status of the Open Ontologies server")]
@@ -234,9 +238,9 @@ impl OpenOntologiesServer {
     async fn onto_validate(&self, Parameters(input): Parameters<OntoValidateInput>) -> String {
         use crate::ontology::OntologyService;
         if input.inline.unwrap_or(false) {
-            OntologyService::validate_string(&input.input).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            OntologyService::validate_string(&input.input).unwrap_or_else(Self::err_json)
         } else {
-            OntologyService::validate_file(&input.input).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            OntologyService::validate_file(&input.input).unwrap_or_else(Self::err_json)
         }
     }
 
@@ -249,17 +253,17 @@ impl OpenOntologiesServer {
                     Ok(content) => {
                         if let Some(output) = input.output {
                             match std::fs::write(&output, &content) {
-                                Ok(_) => format!(r#"{{"ok":true,"path":"{}","format":"{}"}}"#, output, input.to),
-                                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                                Ok(_) => serde_json::json!({"ok":true,"path":output,"format":input.to}).to_string(),
+                                Err(e) => Self::err_json(e),
                             }
                         } else {
                             content
                         }
                     }
-                    Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                    Err(e) => Self::err_json(e),
                 }
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -269,7 +273,7 @@ impl OpenOntologiesServer {
             // Inline turtle bypasses the registry/cache (no source file).
             match self.graph.load_turtle(&turtle, None) {
                 Ok(count) => format!(r#"{{"ok":true,"triples_loaded":{},"source":"inline"}}"#, count),
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => Self::err_json(e),
             }
         } else if let Some(path) = input.path {
             let path = expand_tilde(&path);
@@ -287,7 +291,7 @@ impl OpenOntologiesServer {
                     "origin": res.origin,
                     "cache_path": res.cache_path,
                 }).to_string(),
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+                Err(e) => Self::err_json(e),
             }
         } else {
             r#"{"error":"Either 'path' or 'turtle' must be provided"}"#.to_string()
@@ -308,10 +312,7 @@ impl OpenOntologiesServer {
             match crate::repo::resolve_within_repos(dir, repos) {
                 Ok((start, repo_root)) => crate::repo::list_one(&repo_root, &start, recursive),
                 Err(e) => {
-                    return format!(
-                        r#"{{"error":"{}"}}"#,
-                        e.to_string().replace('"', "'")
-                    );
+                    return Self::err_json(e);
                 }
             }
         } else {
@@ -393,10 +394,7 @@ impl OpenOntologiesServer {
         let path = match crate::repo::resolve_load_target(&input.name, repos) {
             Ok(p) => p,
             Err(e) => {
-                return format!(
-                    r#"{{"error":"{}"}}"#,
-                    e.to_string().replace('"', "'")
-                );
+                return Self::err_json(e);
             }
         };
         let opts = crate::registry::LoadOptions {
@@ -414,37 +412,37 @@ impl OpenOntologiesServer {
                 "cache_path": res.cache_path,
             })
             .to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
     #[tool(name = "onto_query", description = "Run a SPARQL query against the loaded ontology store. If the active ontology has been evicted from memory (idle TTL), it is transparently reloaded from the compile cache before the query runs.")]
     async fn onto_query(&self, Parameters(input): Parameters<OntoQueryInput>) -> String {
         if let Err(e) = self.registry.ensure_loaded() {
-            return format!(r#"{{"error":"ensure_loaded: {}"}}"#, e.to_string().replace('"', "'"));
+            return Self::err_json(format!("ensure_loaded: {e}"));
         }
-        self.graph.sparql_select(&input.query).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+        self.graph.sparql_select(&input.query).unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_save", description = "Save the current ontology store to a file")]
     async fn onto_save(&self, Parameters(input): Parameters<OntoSaveInput>) -> String {
         if let Err(e) = self.registry.ensure_loaded() {
-            return format!(r#"{{"error":"ensure_loaded: {}"}}"#, e.to_string().replace('"', "'"));
+            return Self::err_json(format!("ensure_loaded: {e}"));
         }
         let format = input.format.as_deref().unwrap_or("turtle");
         let path = expand_tilde(&input.path);
         match self.graph.save_file(&path, format) {
-            Ok(_) => format!(r#"{{"ok":true,"path":"{}","format":"{}"}}"#, path, format),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(_) => serde_json::json!({"ok":true,"path":path,"format":format}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
     #[tool(name = "onto_stats", description = "Get statistics about the loaded ontology (triple count, classes, properties, individuals)")]
     fn onto_stats(&self) -> String {
         if let Err(e) = self.registry.ensure_loaded() {
-            return format!(r#"{{"error":"ensure_loaded: {}"}}"#, e.to_string().replace('"', "'"));
+            return Self::err_json(format!("ensure_loaded: {e}"));
         }
-        self.graph.get_stats().unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+        self.graph.get_stats().unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_diff", description = "Compare two ontology files and show added/removed triples")]
@@ -452,13 +450,13 @@ impl OpenOntologiesServer {
         use crate::ontology::OntologyService;
         let old = match std::fs::read_to_string(&input.old_path) {
             Ok(c) => c,
-            Err(e) => return format!(r#"{{"error":"Cannot read {}: {}"}}"#, input.old_path, e),
+            Err(e) => return Self::err_json(format!("Cannot read {}: {}", input.old_path, e)),
         };
         let new = match std::fs::read_to_string(&input.new_path) {
             Ok(c) => c,
-            Err(e) => return format!(r#"{{"error":"Cannot read {}: {}"}}"#, input.new_path, e),
+            Err(e) => return Self::err_json(format!("Cannot read {}: {}", input.new_path, e)),
         };
-        OntologyService::diff(&old, &new).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+        OntologyService::diff(&old, &new).unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_lint", description = "Check an ontology for quality issues: missing labels, comments, domains, ranges")]
@@ -469,10 +467,10 @@ impl OpenOntologiesServer {
         } else {
             match std::fs::read_to_string(&input.input) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => return Self::err_json(e),
             }
         };
-        OntologyService::lint_with_feedback(&content, Some(&self.db)).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+        OntologyService::lint_with_feedback(&content, Some(&self.db)).unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_clear", description = "Clear all triples from the in-memory ontology store and unload the active registry slot (cache file is preserved)")]
@@ -481,7 +479,7 @@ impl OpenOntologiesServer {
         let _ = self.registry.unload(false);
         match self.graph.clear() {
             Ok(_) => r#"{"ok":true,"message":"Store cleared"}"#.to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -501,13 +499,13 @@ impl OpenOntologiesServer {
                     "name": name,
                     "message": "entry exists in cache but was not in memory; pass delete_cache=true to remove it",
                 }).to_string(),
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+                Err(e) => Self::err_json(e),
             };
         }
         match self.registry.unload(del) {
             Ok(Some(name)) => serde_json::json!({"ok": true, "unloaded": name, "deleted_cache": del}).to_string(),
             Ok(None) => r#"{"ok":true,"unloaded":null,"message":"no active ontology"}"#.to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -525,7 +523,7 @@ impl OpenOntologiesServer {
                 "origin": res.origin,
                 "cache_path": res.cache_path,
             }).to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -542,7 +540,7 @@ impl OpenOntologiesServer {
                 "count": entries.len(),
                 "entries": entries,
             }).to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -561,7 +559,7 @@ impl OpenOntologiesServer {
                 "name": input.name,
                 "message": "entry was found but delete_file=false and it was not active, so nothing changed",
             }).to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -574,21 +572,21 @@ impl OpenOntologiesServer {
             match GraphStore::fetch_sparql_auth(&input.url, query, &auth).await {
                 Ok(content) => {
                     match self.graph.load_turtle(&content, None) {
-                        Ok(count) => format!(r#"{{"ok":true,"triples_loaded":{},"source":"{}"}}"#, count, input.url),
-                        Err(e) => format!(r#"{{"error":"Parse error: {}"}}"#, e),
+                        Ok(count) => serde_json::json!({"ok": true, "triples_loaded": count, "source": input.url}).to_string(),
+                        Err(e) => serde_json::json!({"error": format!("Parse error: {e}")}).to_string(),
                     }
                 }
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => serde_json::json!({"error": e.to_string()}).to_string(),
             }
         } else {
             match GraphStore::fetch_url(&input.url).await {
                 Ok(content) => {
                     match self.graph.load_turtle(&content, None) {
-                        Ok(count) => format!(r#"{{"ok":true,"triples_loaded":{},"source":"{}"}}"#, count, input.url),
-                        Err(e) => format!(r#"{{"error":"Parse error: {}"}}"#, e),
+                        Ok(count) => serde_json::json!({"ok": true, "triples_loaded": count, "source": input.url}).to_string(),
+                        Err(e) => serde_json::json!({"error": format!("Parse error: {e}")}).to_string(),
                     }
                 }
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => serde_json::json!({"error": e.to_string()}).to_string(),
             }
         }
     }
@@ -600,11 +598,11 @@ impl OpenOntologiesServer {
         match self.graph.serialize("ntriples") {
             Ok(content) => {
                 match GraphStore::push_sparql_auth(&input.endpoint, &content, input.graph.as_deref(), &auth).await {
-                    Ok(msg) => format!(r#"{{"ok":true,"message":"{}"}}"#, msg),
-                    Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                    Ok(msg) => serde_json::json!({"ok": true, "message": msg}).to_string(),
+                    Err(e) => serde_json::json!({"error": e.to_string()}).to_string(),
                 }
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => serde_json::json!({"error": e.to_string()}).to_string(),
         }
     }
 
@@ -707,13 +705,13 @@ impl OpenOntologiesServer {
 
     // ── Marketplace ────────────────────────────────────────────────────────
 
-    #[tool(name = "onto_marketplace", description = "Browse and install standard ontologies from a curated catalogue of 33 W3C/ISO/industry standards. Actions: 'list' (browse catalogue, optional domain filter) or 'install' (fetch and load by ID)")]
+    #[tool(name = "onto_marketplace", description = "Browse and install ontologies from the curated catalogue of 33 W3C/ISO/industry standards plus the open community-pack registry (community/registry.json, fetched at runtime; override with OPEN_ONTOLOGIES_COMMUNITY_REGISTRY). Actions: 'list' (browse both tiers, optional domain filter; community=false for curated only) or 'install' (fetch and load by ID — curated IDs win over community)")]
     async fn onto_marketplace(&self, Parameters(input): Parameters<OntoMarketplaceInput>) -> String {
         use crate::marketplace;
         match input.action.as_str() {
             "list" => {
                 let entries = marketplace::list(input.domain.as_deref());
-                let items: Vec<serde_json::Value> = entries.iter().map(|e| {
+                let mut items: Vec<serde_json::Value> = entries.iter().map(|e| {
                     serde_json::json!({
                         "id": e.id,
                         "name": e.name,
@@ -721,12 +719,46 @@ impl OpenOntologiesServer {
                         "domain": e.domain,
                         "url": e.url,
                         "format": marketplace::format_name(e.format),
+                        "source": "curated",
                     })
                 }).collect();
+                let mut community_error = None;
+                let mut registry_source = None;
+                if input.community.unwrap_or(true) {
+                    match marketplace::load_community_packs().await {
+                        Ok((packs, shadowed, source)) => {
+                            registry_source = Some(source);
+                            for p in packs.iter().filter(|p| {
+                                input.domain.as_deref().is_none_or(|d| p.domain == d)
+                            }) {
+                                items.push(serde_json::json!({
+                                    "id": p.id,
+                                    "name": p.name,
+                                    "description": p.description,
+                                    "domain": p.domain,
+                                    "url": p.url,
+                                    "format": p.format,
+                                    "source": "community",
+                                    "maintainer": p.maintainer,
+                                    "license": p.license,
+                                }));
+                            }
+                            if !shadowed.is_empty() {
+                                community_error = Some(format!(
+                                    "community packs shadowing curated ids were ignored: {}",
+                                    shadowed.join(", ")
+                                ));
+                            }
+                        }
+                        Err(e) => community_error = Some(e),
+                    }
+                }
                 serde_json::json!({
                     "ok": true,
                     "count": items.len(),
                     "ontologies": items,
+                    "community_registry": registry_source,
+                    "community_registry_error": community_error,
                 }).to_string()
             }
             "install" => {
@@ -734,40 +766,131 @@ impl OpenOntologiesServer {
                     Some(id) => id,
                     None => return r#"{"error":"'id' is required for install action"}"#.to_string(),
                 };
-                let entry = match marketplace::find(id) {
-                    Some(e) => e,
-                    None => {
-                        let available: Vec<&str> = marketplace::CATALOGUE.iter().map(|e| e.id).collect();
-                        return serde_json::json!({
-                            "error": format!("Unknown ontology ID: '{}'. Use action 'list' to see available IDs.", id),
-                            "available": available,
-                        }).to_string();
-                    }
+                // Curated first; community packs can never shadow a curated ID.
+                let (name, url, format, tier, license) = match marketplace::find(id) {
+                    Some(e) => (e.name.to_string(), e.url.to_string(), e.format, "curated", None),
+                    None => match marketplace::load_community_packs().await {
+                        Ok((packs, _, _)) => match packs.into_iter().find(|p| p.id == id) {
+                            Some(p) => {
+                                let format = match marketplace::parse_format(&p.format) {
+                                    Some(f) => f,
+                                    None => return serde_json::json!({
+                                        "error": format!("community pack '{}' has invalid format '{}'", id, p.format),
+                                    }).to_string(),
+                                };
+                                (p.name, p.url, format, "community", p.license)
+                            }
+                            None => {
+                                let available: Vec<&str> = marketplace::CATALOGUE.iter().map(|e| e.id).collect();
+                                return serde_json::json!({
+                                    "error": format!("Unknown ontology ID: '{}'. Use action 'list' to see curated and community IDs.", id),
+                                    "available_curated": available,
+                                }).to_string();
+                            }
+                        },
+                        Err(e) => {
+                            let available: Vec<&str> = marketplace::CATALOGUE.iter().map(|e| e.id).collect();
+                            return serde_json::json!({
+                                "error": format!("'{}' is not a curated ID and the community registry could not be loaded: {}", id, e),
+                                "available_curated": available,
+                            }).to_string();
+                        }
+                    },
                 };
-                match crate::graph::GraphStore::fetch_url(entry.url).await {
+                match crate::graph::GraphStore::fetch_url(&url).await {
                     Ok(content) => {
-                        match self.graph.load_content_with_base(&content, entry.format, Some(entry.url)) {
+                        match self.graph.load_content_with_base(&content, format, Some(&url)) {
                             Ok(count) => {
                                 let stats = self.graph.get_stats().unwrap_or_default();
                                 let stats_val: serde_json::Value = serde_json::from_str(&stats).unwrap_or_default();
                                 serde_json::json!({
                                     "ok": true,
-                                    "installed": entry.id,
-                                    "name": entry.name,
+                                    "installed": id,
+                                    "name": name,
+                                    "tier": tier,
+                                    "license": license,
                                     "triples_loaded": count,
-                                    "source": entry.url,
+                                    "source": url,
                                     "classes": stats_val["classes"],
                                     "properties": stats_val["properties"],
                                     "individuals": stats_val["individuals"],
                                 }).to_string()
                             }
-                            Err(e) => format!(r#"{{"error":"Parse error for {}: {}"}}"#, entry.id, e),
+                            Err(e) => Self::err_json(format!("Parse error for {}: {}", id, e)),
                         }
                     }
-                    Err(e) => format!(r#"{{"error":"Fetch error for {}: {}"}}"#, entry.id, e),
+                    Err(e) => Self::err_json(format!("Fetch error for {}: {}", id, e)),
                 }
             }
-            other => format!(r#"{{"error":"Unknown action '{}'. Use 'list' or 'install'."}}"#, other),
+            other => Self::err_json(format!("Unknown action '{}'. Use 'list' or 'install'.", other)),
+        }
+    }
+
+    // ── WASM plugins ───────────────────────────────────────────────────────
+
+    #[tool(name = "onto_plugin_list", description = "Discover installed WASM plugins and the tools they provide. Plugins are community .wasm modules in ~/.open-ontologies/plugins or ./plugins (override with OPEN_ONTOLOGIES_PLUGIN_DIRS), run in-process with fuel metering. Requires a build with --features plugins.")]
+    fn onto_plugin_list(&self) -> String {
+        #[cfg(not(feature = "plugins"))]
+        { r#"{"error":"Compiled without plugins feature. Rebuild with --features plugins"}"#.to_string() }
+        #[cfg(feature = "plugins")]
+        {
+        let (plugins, errors) = crate::plugins::discover();
+        let items: Vec<serde_json::Value> = plugins.iter().map(|p| {
+            serde_json::json!({
+                "name": p.manifest.name,
+                "version": p.manifest.version,
+                "path": p.path.display().to_string(),
+                "tools": p.manifest.tools.iter().map(|t| serde_json::json!({
+                    "name": t.name,
+                    "description": t.description,
+                })).collect::<Vec<_>>(),
+            })
+        }).collect();
+        serde_json::json!({
+            "ok": true,
+            "count": items.len(),
+            "plugins": items,
+            "search_dirs": crate::plugins::plugin_dirs().iter().map(|d| d.display().to_string()).collect::<Vec<_>>(),
+            "broken": errors,
+        }).to_string()
+        }
+    }
+
+    #[tool(name = "onto_plugin_call", description = "Invoke a tool on an installed WASM plugin. Plugins are pure JSON->JSON transforms with no direct store access; pass 'sparql' to run a SELECT against the loaded store and inject its result rows into the plugin input as 'bindings'. Requires a build with --features plugins.")]
+    async fn onto_plugin_call(&self, Parameters(input): Parameters<OntoPluginCallInput>) -> String {
+        #[cfg(not(feature = "plugins"))]
+        { let _ = input; return r#"{"error":"Compiled without plugins feature. Rebuild with --features plugins"}"#.to_string(); }
+        #[cfg(feature = "plugins")]
+        {
+        let plugin = match crate::plugins::find(&input.plugin) {
+            Ok(p) => p,
+            Err(e) => return serde_json::json!({"error": e}).to_string(),
+        };
+        let mut payload = serde_json::json!({
+            "tool": input.tool,
+            "input": input.input.unwrap_or(serde_json::Value::Null),
+        });
+        if let Some(sparql) = input.sparql.as_deref() {
+            if let Err(e) = self.registry.ensure_loaded() {
+                return Self::err_json(format!("ensure_loaded: {e}"));
+            }
+            match self.graph.sparql_select(sparql) {
+                Ok(json) => {
+                    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
+                    payload["bindings"] = parsed.get("results").cloned().unwrap_or(serde_json::Value::Null);
+                }
+                Err(e) => return serde_json::json!({"error": format!("sparql failed: {e}")}).to_string(),
+            }
+        }
+        match crate::plugins::call(&plugin.path, &payload) {
+            Ok(result) => serde_json::json!({
+                "ok": true,
+                "plugin": plugin.manifest.name,
+                "tool": input.tool,
+                "result": result,
+            }).to_string(),
+            Err(e) => serde_json::json!({"error": e, "plugin": plugin.manifest.name}).to_string(),
+        }
         }
     }
 
@@ -775,21 +898,21 @@ impl OpenOntologiesServer {
     async fn onto_version(&self, Parameters(input): Parameters<OntoVersionInput>) -> String {
         use crate::ontology::OntologyService;
         OntologyService::save_version(&self.db, &self.graph, &input.label)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_history", description = "List all saved ontology version snapshots")]
     fn onto_history(&self) -> String {
         use crate::ontology::OntologyService;
         OntologyService::list_versions(&self.db)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_rollback", description = "Restore the ontology store to a previously saved version")]
     async fn onto_rollback(&self, Parameters(input): Parameters<OntoRollbackInput>) -> String {
         use crate::ontology::OntologyService;
         OntologyService::rollback_version(&self.db, &self.graph, &input.label)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     // ── Data ingestion & reasoning ─────────────────────────────────────────
@@ -804,7 +927,7 @@ impl OpenOntologiesServer {
         // Parse data file
         let rows = match DataIngester::parse_file(&input.path) {
             Ok(r) => r,
-            Err(e) => return format!(r#"{{"error":"Failed to parse {}: {}"}}"#, input.path, e),
+            Err(e) => return Self::err_json(format!("Failed to parse {}: {}", input.path, e)),
         };
 
         if rows.is_empty() {
@@ -816,15 +939,15 @@ impl OpenOntologiesServer {
             if input.inline_mapping.unwrap_or(false) {
                 match serde_json::from_str::<MappingConfig>(mapping_str) {
                     Ok(m) => m,
-                    Err(e) => return format!(r#"{{"error":"Invalid mapping JSON: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Invalid mapping JSON: {}", e)),
                 }
             } else {
                 match std::fs::read_to_string(mapping_str) {
                     Ok(content) => match serde_json::from_str::<MappingConfig>(&content) {
                         Ok(m) => m,
-                        Err(e) => return format!(r#"{{"error":"Invalid mapping file: {}"}}"#, e),
+                        Err(e) => return Self::err_json(format!("Invalid mapping file: {}", e)),
                     },
-                    Err(e) => return format!(r#"{{"error":"Cannot read mapping file: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Cannot read mapping file: {}", e)),
                 }
             }
         } else {
@@ -881,36 +1004,52 @@ impl OpenOntologiesServer {
                     "provenance_triples": prov_triples,
                 }).to_string()
             }
-            Err(e) => format!(r#"{{"error":"Failed to load triples: {}"}}"#, e),
+            Err(e) => Self::err_json(format!("Failed to load triples: {}", e)),
         }
     }
 
-    #[tool(name = "onto_temporal_snapshot", description = "Which named graphs are in scope at a point in time, and which are excluded and why. Two independent clocks: valid_at asks what was TRUE then, as_of asks what was KNOWN then. Assertions live in named graphs described in the default graph with temporal:validFrom, validTo and recordedAt; a graph with no description is timeless and always in scope.")]
+    #[tool(name = "onto_temporal_snapshot", description = "Which named graphs are in scope at a point in time, and which are excluded and why. Two independent clocks: valid_at asks what was TRUE then, as_of asks what was KNOWN then. Assertions live in named graphs described in the default graph with temporal:validFrom, validTo, recordedAt and recordedUntil; a graph with no description is timeless and always in scope. Both intervals are half-open, so an assertion whose recordedUntil has passed is excluded as no longer believed instead of being carried forward beside the correction that replaced it. Bounds on all four axes are read as instants on the UTC timeline from xsd:date, xsd:dateTime, xsd:gYearMonth or xsd:gYear; a less precise bound names the FIRST instant of its period, and a value with no timezone offset is UTC. A bound matching none of those, or two different instants on one axis, makes the graph INVALID: reported in `invalid` with a reason, never in scope and never timeless. A graph whose validFrom and validTo both read but together hold at no instant (the same instant twice, or validTo before validFrom) is not invalid: it is excluded at every instant asked about, with a reason naming which of the two it is; with no valid_at it is in scope like any other graph. The scans are capped: `complete` says whether they finished, and a run that was cut short also carries `truncated` and a `warning`, because a truncated validity scan makes this partition wrong rather than merely short. Lineage is asserted, never inferred: temporal:supersedes on the NEWER graph names the graph it replaces, and where the replaced graph carries no recordedUntil its closing bound is derived from the successor's recordedAt (the earliest, where there are several), so an excluded row closed that way carries `superseded_by`; an explicit recordedUntil always governs and a disagreement with the successor is reported, not reconciled. temporal:retracts names a graph withdrawn without replacement: from the retraction's recordedAt the retracted graph leaves in_scope and is listed under `retracted` with the retracting graph and instant; with no as_of the recorded axis is not consulted, for a retraction no more than for a recordedUntil, and the graph takes the ordinary path. `lineage`, present only when non-empty, reports what the links could not settle: a disagreement, a transaction interval that closes before it opens (a successor recorded before its predecessor, reported as inverted and believed at no instant, never clamped), an undated successor or retractor, more than one successor, a cycle, or a link that names nothing readable or is asserted by a graph whose own description could not be read.")]
     async fn onto_temporal_snapshot(&self, Parameters(input): Parameters<OntoTemporalSnapshotInput>) -> String {
         use crate::temporal::Temporal;
         match Temporal::new(self.graph.clone()).snapshot(input.valid_at.as_deref(), input.as_of.as_deref()) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            // Renders the error by quote substitution only, with no JSON
+            // escaping, so a message on this path must never echo caller
+            // text: a backslash or a newline would break the JSON. That is
+            // why `temporal::argument` (the wrapper over `instant::argument`)
+            // does not quote the argument in its message.
+            Err(e) => Self::err_json(e),
         }
     }
 
-    #[tool(name = "onto_temporal_query", description = "Run a SPARQL graph pattern against only the graphs in temporal scope: what the graph said at a given valid time, as known at a given recorded time. Pass the body of a WHERE clause as `pattern`.")]
+    #[tool(name = "onto_temporal_query", description = "Run a SPARQL graph pattern against only the graphs in temporal scope: what the graph said at a given valid time, as known at a given recorded time. Pass the body of a WHERE clause as `pattern`. valid_at and as_of are read as instants on the UTC timeline (xsd:date, xsd:dateTime, xsd:gYearMonth or xsd:gYear; no offset means UTC) and an unreadable one is refused rather than ignored. Graphs whose own bounds could not be read are out of scope and listed in `invalid`. A graph whose bounds read but hold at no instant (validFrom and validTo the same instant, or validTo before validFrom) is out of scope at any valid_at, as at every other instant, and onto_temporal_snapshot at that instant reports it under `excluded` with a reason naming which; with no valid_at it is read like any other graph, since no instant was asked about. `complete` is false when the result list was cut at its cap or when the scope it ran over was, and `truncated` says which; only the second case is a wrong answer, and it carries a `warning`. The scope honours asserted lineage: a graph whose closing bound was derived from the recordedAt of the graph that temporal:supersedes it is out of scope from that instant, and a graph a temporal:retracts link has withdrawn by as_of is not read and is listed under `retracted` (with no as_of the recorded axis is not consulted, for a retraction no more than for a recordedUntil, and the graph is read like any other); `lineage` carries what the links could not settle, both keys present only when non-empty.")]
     async fn onto_temporal_query(&self, Parameters(input): Parameters<OntoTemporalQueryInput>) -> String {
         use crate::temporal::Temporal;
         match Temporal::new(self.graph.clone()).query_at(
             &input.pattern, input.valid_at.as_deref(), input.as_of.as_deref(),
         ) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            // Renders the error by quote substitution only, with no JSON
+            // escaping, so a message on this path must never echo caller
+            // text: a backslash or a newline would break the JSON. That is
+            // why `temporal::argument` (the wrapper over `instant::argument`)
+            // does not quote the argument in its message.
+            Err(e) => Self::err_json(e),
         }
     }
 
-    #[tool(name = "onto_temporal_conflicts", description = "Disjointness violations that claim OVERLAPPING validity, separated from those that do not. Without valid time a correction reads as a contradiction: an entity recorded one way until May and another after trips every check. This reports genuine disagreement about the same period as contradictions, and everything else as superseded history.")]
+    #[tool(name = "onto_temporal_conflicts", description = "Disjointness violations that claim OVERLAPPING validity, separated from those that do not. Without valid time a correction reads as a contradiction: an entity recorded one way until May and another after trips every check. This reports genuine disagreement about the same period as contradictions, and everything else as non_overlapping: pairs with no instant in common, judged on their bounds read as instants on the UTC timeline, so a timezone offset is honoured. That is all that is checked -- it is not evidence that one assertion replaced another, and the bucket also holds pairs separated by a GAP, which is missing coverage rather than history, and pairs where one period holds at no instant (empty or inverted), which onto_temporal_snapshot reports once with a reason naming which. The `superseded` key carries the same set under a name that claimed more than was proven; it is deprecated and will be dropped at 2.0. A pair whose graph has temporal metadata that could not be read is in neither bucket: it goes to `undecided`, because an unreadable period is not an open one and treating it as timeless would make it overlap everything. The scans are capped: `complete` says whether they finished, and if the validity scan was cut a `warning` marks the classification unsound, because a pair compared without its periods can appear here as a contradiction when it is a correction. A pair where one graph asserts that it temporal:supersedes the other, directly or through a chain of supersedes links, lands in `corrections` (with `corrections_count`, present only when non-empty) before the overlap test is reached: lineage that is asserted and never inferred, and such a pair is never a contradiction whatever its periods. A retracted graph is not treated specially here.")]
     async fn onto_temporal_conflicts(&self) -> String {
         use crate::temporal::Temporal;
         match Temporal::new(self.graph.clone()).conflicts() {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            // Renders the error by quote substitution only, with no JSON
+            // escaping, so a message on this path must never echo caller
+            // text: a backslash or a newline would break the JSON. This
+            // handler takes no argument, so nothing caller-supplied reaches
+            // it today; the rule is stated so an argument added later
+            // inherits it.
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -923,7 +1062,7 @@ impl OpenOntologiesServer {
         }
         match IncrementalReasoner::run(&self.graph, &delta, input.materialize.unwrap_or(true)) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -933,7 +1072,7 @@ impl OpenOntologiesServer {
         let checker = SupportChecker::new(self.graph.clone(), self.db.clone());
         match checker.check(input.prov_predicate.as_deref(), input.limit.unwrap_or(25)) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -943,7 +1082,7 @@ impl OpenOntologiesServer {
         let checker = SupportChecker::new(self.graph.clone(), self.db.clone());
         match checker.record_verdict(&input.claim_id, &input.verdict, input.note.as_deref()) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -953,7 +1092,7 @@ impl OpenOntologiesServer {
         let checker = SupportChecker::new(self.graph.clone(), self.db.clone());
         match checker.report(input.prov_predicate.as_deref()) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -983,7 +1122,7 @@ impl OpenOntologiesServer {
             &input.version.unwrap_or_else(|| "1.0.0".into()), evidence,
         ) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -992,7 +1131,7 @@ impl OpenOntologiesServer {
         use crate::pack::Packer;
         match Packer::new(self.graph.clone()).unpack(&input.path, input.verify_only.unwrap_or(false)) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1002,7 +1141,7 @@ impl OpenOntologiesServer {
         let detector = Communities::new(self.graph.clone());
         match detector.detect(input.min_size.unwrap_or(3), input.top_members.unwrap_or(8)) {
             Ok(json) => json,
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e.to_string().replace('"', "'")),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1013,7 +1152,7 @@ impl OpenOntologiesServer {
 
         let rows = match DataIngester::parse_file(&input.data_path) {
             Ok(r) => r,
-            Err(e) => return format!(r#"{{"error":"Failed to parse {}: {}"}}"#, input.data_path, e),
+            Err(e) => return Self::err_json(format!("Failed to parse {}: {}", input.data_path, e)),
         };
         let headers = DataIngester::extract_headers(&rows);
 
@@ -1063,7 +1202,7 @@ impl OpenOntologiesServer {
         if let Some(ref save_path) = input.save_path
             && let Ok(json) = serde_json::to_string_pretty(&mapping)
                 && let Err(e) = std::fs::write(save_path, &json) {
-                    return format!(r#"{{"error":"Cannot write mapping file: {}"}}"#, e);
+                    return Self::err_json(format!("Cannot write mapping file: {}", e));
                 }
 
         result.to_string()
@@ -1077,11 +1216,11 @@ impl OpenOntologiesServer {
         } else {
             match std::fs::read_to_string(&input.shapes) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"Cannot read shapes file: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("Cannot read shapes file: {}", e)),
             }
         };
         ShaclValidator::validate(&self.graph, &shapes)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_ossie_import", description = "Compile an Apache Ossie (incubating, formerly Open Semantic Interchange) ontology document into OWL 2 DL + SHACL, and optionally load it into the active store so every other tool here works on it. Ossie is the vendor-neutral semantic-model spec backed by Snowflake, Salesforce, Databricks, dbt Labs and ~50 other platforms; its ontology module is a fact-based conceptual model (EntityType/ValueType concepts, roles, multiplicities, verbalizations, identifiers, derivation rules) that references neither RDF, OWL, SKOS nor SHACL. That means an Ossie ontology is invisible to every reasoner and validator in the semantic web stack until it is compiled. This tool does the compile: concepts become owl:Class / rdfs:Datatype, binary relationships become object/datatype properties, `identify_by` becomes owl:hasKey, unary relationships become subclasses, arity>=3 relationships are reified (W3C n-ary pattern 1), and the recognised `requires` fragment becomes XSD facets mirrored into SHACL. FOUR Ossie constructs have no OWL 2 DL expression and are carried by SHACL or by annotation instead: OneToOne onto a ValueType (that is InverseFunctionalDataProperty, forbidden in OWL 2 DL — and it is the COMMON case, since a preferred identifier is by construction a relationship to a value type), ManyToOne on arity>=3 (a tuple functional dependency), `derived_by` (a recursive rule language) and `requires` beyond scalar comparison. Every one of these is reported in `issues` and preserved verbatim as an ossie: annotation, so nothing is silently dropped. After `load=true`, run onto_reason / onto_dl_explain / onto_shacl / onto_query against a semantic model that previously had no formal semantics at all.")]
@@ -1146,11 +1285,11 @@ impl OpenOntologiesServer {
         } else {
             match std::fs::read_to_string(&input.shapes) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"Cannot read shapes file: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("Cannot read shapes file: {}", e)),
             }
         };
         ShaclValidator::check_shapes(&self.graph, &shapes)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_vocab_check", description = "Closed-world vocabulary check on a Turtle DATA graph: verify that every predicate and every rdf:type class used in the data is actually DECLARED in the loaded ontology. Catches hallucinated/undeclared terms — e.g. an LLM emitting `ies:hasDeparturePort` when the ontology only defines `ies:scheduledDeparturePort`. This is the gate open-world SHACL structurally CANNOT provide: SHACL silently ignores predicates it has no shape for, so a graph full of invented terms still reports conforms=true. Only IRIs whose namespace belongs to the ontology (plus any passed in `namespaces`) are policed; standard rdf/rdfs/owl/xsd/sh vocabulary and your instance-data IRIs are never flagged. Returns {conforms, hallucinated_terms, checked_namespaces}. Companion to `onto_shacl` (open-world structural validation of data) and `onto_shacl_check` (checks proposed SHACL shapes); run this on generated data to catch fabricated vocabulary before it enters the store.")]
@@ -1160,32 +1299,32 @@ impl OpenOntologiesServer {
         } else {
             match std::fs::read_to_string(&input.data) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"Cannot read data file: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("Cannot read data file: {}", e)),
             }
         };
         let extra = input.namespaces.clone().unwrap_or_default();
         crate::vocab_check::check_data_vocab(&self.graph, &data, &extra)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_align_flora", description = "End-to-end FLORA alignment (#38). Takes the currently-loaded graph as source and a Turtle string for target, enumerates plausible class-pairs (pre-filtered by shared label tokens), extracts the four FLORA signals per pair (label Jaccard, parent overlap, sibling overlap, datatype overlap) from the structural neighbourhood, runs the 10-rule Mamdani inference engine, and returns only the accept-verdict pairs. Companion to `onto_align_fuzzy` (per-pair adjudication when you already have signals).")]
     async fn onto_align_flora(&self, Parameters(input): Parameters<OntoAlignFloraInput>) -> String {
         let target = std::sync::Arc::new(crate::graph::GraphStore::new());
         if let Err(e) = target.load_turtle(&input.target_ttl, None) {
-            return format!(r#"{{"error":"target_ttl failed to parse: {}"}}"#, e);
+            return Self::err_json(format!("target_ttl failed to parse: {}", e));
         }
         let low = input.low_threshold.unwrap_or(0.4);
         let high = input.high_threshold.unwrap_or(0.65);
         let report = crate::flora_pipeline::align_with_flora(&self.graph, &target, low, high);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "onto_align_fuzzy", description = "FLORA-style fuzzy-logic alignment adjudication (#38, ISWC 2025 Best Paper). Caller supplies per-pair signals (`label_jaccard`, `parent_overlap`, `sibling_overlap`, `datatype_overlap` all in [0,1]) plus low/high thresholds; server combines via the chosen t-norm (`min` / `product` / `lukasiewicz`) and emits verdict `\"accept\"` / `\"borderline\"` / `\"reject\"` plus a rule trace. Embedding-free, interpretable, complements the HNSW candidate-generator pipeline.")]
     async fn onto_align_fuzzy(&self, Parameters(input): Parameters<OntoAlignFuzzyInput>) -> String {
         let signals: crate::align_fuzzy::FuzzySignals = match serde_json::from_str(&input.signals_json) {
             Ok(s) => s,
-            Err(e) => return format!(r#"{{"error":"invalid signals_json: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("invalid signals_json: {}", e)),
         };
         let tnorm = match input.tnorm.as_deref() {
             Some("product") => crate::align_fuzzy::TNorm::Product,
@@ -1194,7 +1333,7 @@ impl OpenOntologiesServer {
         };
         let decision = crate::align_fuzzy::adjudicate(&signals, tnorm, input.low_threshold, input.high_threshold);
         serde_json::to_string(&decision)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "onto_policy_register", description = "Register an ARGOS-style policy rule (#40, ISWC 2025 WOP). `effect` is `\"allow\"` or `\"deny\"`; `condition` is a SPARQL ASK that can use the `{target}` placeholder. Pairs with `onto_policy_check` and `onto_certify_action` — CIVeX gates causal risk, ARGOS gates authorisation.")]
@@ -1206,8 +1345,8 @@ impl OpenOntologiesServer {
             description: input.description,
         };
         match crate::policy::register_rule(&self.db, &rule) {
-            Ok(()) => format!(r#"{{"ok":true,"registered":"{}"}}"#, input.name),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"registered":input.name}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1215,8 +1354,8 @@ impl OpenOntologiesServer {
     async fn onto_policy_list(&self) -> String {
         match crate::policy::list_rules(&self.db) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1224,8 +1363,8 @@ impl OpenOntologiesServer {
     async fn onto_policy_check(&self, Parameters(input): Parameters<OntoPolicyCheckInput>) -> String {
         match crate::policy::check_action(&self.db, &self.graph, &input.target_iris) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1233,30 +1372,30 @@ impl OpenOntologiesServer {
     async fn eval_rag_mmrag(&self, Parameters(input): Parameters<OntoEvalRagMmragInput>) -> String {
         let qas = match crate::eval_rag::parse_mmrag_dataset(&input.dataset_json) {
             Ok(q) => q,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
         let report = crate::eval_rag::evaluate(&qas);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "eval_rag", description = "mmRAG benchmark scoring (#41, ISWC 2025). Input is a JSON array of {question_id, gold_iri, retrieved: [iri, ...]}. Returns Hit@{3,5,10}, MRR, exact-match-at-1, and per-question rank (0 = gold not retrieved).")]
     async fn eval_rag(&self, Parameters(input): Parameters<OntoEvalRagInput>) -> String {
         let qas: Vec<crate::eval_rag::RagQa> = match serde_json::from_str(&input.qa_json) {
             Ok(q) => q,
-            Err(e) => return format!(r#"{{"error":"invalid qa_json: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("invalid qa_json: {}", e)),
         };
         let report = crate::eval_rag::evaluate(&qas);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "onto_classify_el", description = "Classify the loaded ontology in the OWL-EL fragment (#30). Materialises OWL-RL-ext entailments in a sandbox copy of the graph and emits every distinct subsumption `?sub rdfs:subClassOf ?super` (transitive closure, deduplicated, owl:Thing-trivial pairs removed). For deep SHOIQ subsumption, use `onto_dl_check` / `onto_dl_explain`.")]
     async fn onto_classify_el(&self) -> String {
         match crate::classify_el::classify(&self.graph) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1265,38 +1404,38 @@ impl OpenOntologiesServer {
         let reference: Vec<crate::eval_alignment::AlignmentEntry> =
             match serde_json::from_str(&input.reference_json) {
                 Ok(r) => r,
-                Err(e) => return format!(r#"{{"error":"invalid reference_json: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("invalid reference_json: {}", e)),
             };
         let computed: Vec<crate::eval_alignment::AlignmentEntry> =
             match serde_json::from_str(&input.computed_json) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"invalid computed_json: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("invalid computed_json: {}", e)),
             };
         let report = crate::eval_alignment::evaluate(&reference, &computed);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "onto_shape_induce", description = "Kastor-style data-driven SHACL shape induction (#36, K-CAP 2025). For each property subset up to `max_size`, compute support (fraction of class instances having all properties) and confidence (fraction of any-instances-with-properties that are class members). Returns the top-k candidates ranked by `support × confidence`, each carrying a ready-to-use SHACL NodeShape Turtle block. Filter via `min_support` (default 0.1) and `min_confidence` (default 0.5).")]
     async fn onto_shape_induce(&self, Parameters(input): Parameters<OntoShapeInduceInput>) -> String {
-        let max = input.max_size.unwrap_or(3);
+        let max = input.max_size.unwrap_or(3).min(8); // hard cap: guards the combinatorial blow-up at the tool boundary
         let top_k = input.top_k.unwrap_or(10);
         let min_support = input.min_support.unwrap_or(0.1);
         let min_confidence = input.min_confidence.unwrap_or(0.5);
         match crate::shape_combinatorics::induce_shapes(&self.graph, &input.class_iri, max, top_k, min_support, min_confidence) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
     #[tool(name = "onto_shape_combinatorics", description = "Enumerate the property-combination lattice for a class (#36, K-CAP 2025 Kastor). Returns subsets of the class's rdfs:domain properties up to `max_size` (default 3). Used by shape-induction algorithms to enumerate candidate SHACL shapes from data.")]
     async fn onto_shape_combinatorics(&self, Parameters(input): Parameters<OntoShapeCombinatoricsInput>) -> String {
-        let max = input.max_size.unwrap_or(3);
+        let max = input.max_size.unwrap_or(3).min(8); // hard cap: guards the combinatorial blow-up at the tool boundary
         match crate::shape_combinatorics::enumerate(&self.graph, &input.class_iri, max) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1305,11 +1444,11 @@ impl OpenOntologiesServer {
         let candidates: Vec<crate::borderline_loop::Candidate> =
             match serde_json::from_str(&input.candidates_json) {
                 Ok(c) => c,
-                Err(e) => return format!(r#"{{"error":"invalid candidates_json: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("invalid candidates_json: {}", e)),
             };
         let report = crate::borderline_loop::partition(candidates, input.low_threshold, input.high_threshold);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "borderline_record_verdict", description = "Persist an orchestrator's verdict on a borderline candidate (#37). verdict must be \"accept\" or \"reject\". Namespaces let independent borderline loops coexist.")]
@@ -1321,8 +1460,8 @@ impl OpenOntologiesServer {
             rationale: input.rationale,
         };
         match crate::borderline_loop::record_verdict(&self.db, &v) {
-            Ok(()) => format!(r#"{{"ok":true,"candidate_id":"{}"}}"#, input.candidate_id),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"candidate_id":input.candidate_id}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1330,8 +1469,8 @@ impl OpenOntologiesServer {
     async fn onto_extract_scaffold(&self, Parameters(input): Parameters<OntoExtractScaffoldInput>) -> String {
         match crate::extract_scaffold::build_scaffold(&self.graph, &input.class_iri) {
             Ok(s) => serde_json::to_string(&s)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1340,12 +1479,12 @@ impl OpenOntologiesServer {
         let scaffold: crate::extract_scaffold::ExtractionScaffold =
             match serde_json::from_str(&input.scaffold_json) {
                 Ok(s) => s,
-                Err(e) => return format!(r#"{{"error":"invalid scaffold_json: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("invalid scaffold_json: {}", e)),
             };
         match crate::extract_scaffold::validate_extraction(&scaffold, &input.extraction_json) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1353,11 +1492,11 @@ impl OpenOntologiesServer {
     async fn onto_cq_run(&self, Parameters(input): Parameters<OntoCqRunInput>) -> String {
         let cqs: Vec<crate::cq::CompetencyQuestion> = match serde_json::from_str(&input.cqs_json) {
             Ok(c) => c,
-            Err(e) => return format!(r#"{{"error":"invalid cqs_json: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("invalid cqs_json: {}", e)),
         };
         let report = crate::cq::run_cq_suite(&self.graph, &cqs);
         serde_json::to_string(&report)
-            .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e))
+            .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e)))
     }
 
     #[tool(name = "onto_verify_cq", description = "Persist an LLM-supplied (or human-supplied) verdict on a CQ result (#39, ISWC 2025 Lippolis). verdict must be one of \"correct\", \"incorrect\", \"partial\". Server stores verdicts; the LLM does the judging. Pairs with `onto_cq_run`.")]
@@ -1369,8 +1508,8 @@ impl OpenOntologiesServer {
             judge: input.judge,
         };
         match crate::cq::verify_cq(&self.db, &v) {
-            Ok(()) => format!(r#"{{"ok":true,"cq_id":"{}"}}"#, input.cq_id),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"cq_id":input.cq_id}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1378,8 +1517,8 @@ impl OpenOntologiesServer {
     async fn onto_cq_verdicts_list(&self, Parameters(input): Parameters<OntoCqVerdictsListInput>) -> String {
         match crate::cq::list_cq_verdicts(&self.db, &input.cq_id) {
             Ok(v) => serde_json::to_string(&v)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1389,8 +1528,8 @@ impl OpenOntologiesServer {
         let include_abox = input.include_abox.unwrap_or(false);
         match crate::segment_retrieve::retrieve_segment(&self.graph, &input.seed_iris, hops, include_abox) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1398,8 +1537,8 @@ impl OpenOntologiesServer {
     async fn onto_coevolve_dependency_graph(&self, Parameters(input): Parameters<OntoCoevolveDepGraphInput>) -> String {
         match crate::coevolve::build_dependency_graph(&input.shapes_ttl) {
             Ok(d) => serde_json::to_string(&d)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1408,8 +1547,8 @@ impl OpenOntologiesServer {
         let profile = input.profile.unwrap_or_else(|| "owl-rl".to_string());
         match crate::coevolve::incremental_check(&self.graph, &input.shapes_ttl, &input.changed_iris, &profile) {
             Ok(r) => serde_json::to_string(&r)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1418,8 +1557,8 @@ impl OpenOntologiesServer {
         let profile = input.profile.unwrap_or_else(|| "owl-rl".to_string());
         match crate::coevolve::coevolve_check(&self.graph, &input.shapes_ttl, &profile) {
             Ok(report) => serde_json::to_string(&report)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1427,8 +1566,8 @@ impl OpenOntologiesServer {
     async fn graph_projection_lossy_check(&self, Parameters(input): Parameters<GraphProjectionLossyCheckInput>) -> String {
         match crate::projection_check::check_projection_loss(&self.graph, &input.source_iris, &input.projected_ttl) {
             Ok(report) => serde_json::to_string(&report)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1454,8 +1593,8 @@ impl OpenOntologiesServer {
         };
         match crate::civex::certify_action(&self.db, &self.graph, &frame) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1465,12 +1604,12 @@ impl OpenOntologiesServer {
     async fn onto_action_register(&self, Parameters(input): Parameters<OntoActionRegisterInput>) -> String {
         let schema: crate::dynamics::ActionSchema = match serde_json::from_str(&input.schema_json) {
             Ok(s) => s,
-            Err(e) => return format!(r#"{{"error":"invalid schema_json: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("invalid schema_json: {}", e)),
         };
         let name = schema.name.clone();
         match crate::dynamics::register(&self.db, &schema) {
-            Ok(()) => format!(r#"{{"ok":true,"registered":"{}"}}"#, name),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"registered":name}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1478,8 +1617,8 @@ impl OpenOntologiesServer {
     async fn onto_action_applicable(&self, Parameters(input): Parameters<OntoActionApplicableInput>) -> String {
         let schema = match crate::dynamics::lookup(&self.db, &input.action_name) {
             Ok(Some(s)) => s,
-            Ok(None) => return format!(r#"{{"error":"unknown action: {}"}}"#, input.action_name),
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Ok(None) => return Self::err_json(format!("unknown action: {}", input.action_name)),
+            Err(e) => return Self::err_json(e),
         };
         let bindings: Vec<(String, String)> = input.bindings.into_iter().collect();
         let applicable = schema.applicable(&self.graph, &bindings);
@@ -1496,8 +1635,8 @@ impl OpenOntologiesServer {
     async fn onto_action_apply(&self, Parameters(input): Parameters<OntoActionApplyInput>) -> String {
         let schema = match crate::dynamics::lookup(&self.db, &input.action_name) {
             Ok(Some(s)) => s,
-            Ok(None) => return format!(r#"{{"error":"unknown action: {}"}}"#, input.action_name),
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Ok(None) => return Self::err_json(format!("unknown action: {}", input.action_name)),
+            Err(e) => return Self::err_json(e),
         };
         let bindings: Vec<(String, String)> = input.bindings.into_iter().collect();
         if input.check_preconditions && !schema.applicable(&self.graph, &bindings) {
@@ -1514,8 +1653,8 @@ impl OpenOntologiesServer {
         };
         match outcome {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1531,8 +1670,8 @@ impl OpenOntologiesServer {
             .collect();
         match crate::dynamics_bcplus::apply_concurrent(&self.db, &self.graph, &steps) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1544,8 +1683,8 @@ impl OpenOntologiesServer {
             description: input.description,
         };
         match crate::dynamics_bcplus::register_invariant(&self.db, &law) {
-            Ok(()) => format!(r#"{{"ok":true,"registered":"{}"}}"#, input.name),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"registered":input.name}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1553,8 +1692,8 @@ impl OpenOntologiesServer {
     async fn onto_invariant_list(&self) -> String {
         match crate::dynamics_bcplus::list_invariants(&self.db) {
             Ok(laws) => serde_json::to_string(&laws)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1562,7 +1701,7 @@ impl OpenOntologiesServer {
     async fn onto_invariant_remove(&self, Parameters(input): Parameters<OntoInvariantRemoveInput>) -> String {
         match crate::dynamics_bcplus::remove_invariant(&self.db, &input.name) {
             Ok(removed) => format!(r#"{{"removed":{}}}"#, removed),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1570,8 +1709,8 @@ impl OpenOntologiesServer {
     async fn onto_invariant_check(&self) -> String {
         match crate::dynamics_bcplus::check_invariants(&self.db, &self.graph) {
             Ok(violations) => serde_json::to_string(&violations)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1587,8 +1726,8 @@ impl OpenOntologiesServer {
             description: input.description,
         };
         match crate::dynamics_bcplus::register_default(&self.db, &law) {
-            Ok(()) => format!(r#"{{"ok":true,"registered":"{}"}}"#, input.name),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Ok(()) => serde_json::json!({"ok":true,"registered":input.name}).to_string(),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1596,8 +1735,8 @@ impl OpenOntologiesServer {
     async fn onto_default_apply(&self) -> String {
         match crate::dynamics_bcplus::apply_defaults(&self.db, &self.graph) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1605,8 +1744,8 @@ impl OpenOntologiesServer {
     async fn onto_action_list(&self) -> String {
         match crate::dynamics::list_names(&self.db) {
             Ok(names) => serde_json::to_string(&names)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1619,8 +1758,8 @@ impl OpenOntologiesServer {
             input.search.as_deref(),
         ) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1637,8 +1776,8 @@ impl OpenOntologiesServer {
             .collect();
         match crate::plan_validate::validate_plan(&self.db, &self.graph, &steps, &goal_facts) {
             Ok(result) => serde_json::to_string(&result)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1648,7 +1787,7 @@ impl OpenOntologiesServer {
         let names = if input.action_names.is_empty() {
             match crate::dynamics::list_names(&self.db) {
                 Ok(n) => n,
-                Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => return Self::err_json(e),
             }
         } else {
             input.action_names
@@ -1657,8 +1796,8 @@ impl OpenOntologiesServer {
         for n in &names {
             match crate::dynamics::lookup(&self.db, n) {
                 Ok(Some(s)) => schemas.push(s),
-                Ok(None) => return format!(r#"{{"error":"unknown action: {}"}}"#, n),
-                Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+                Ok(None) => return Self::err_json(format!("unknown action: {}", n)),
+                Err(e) => return Self::err_json(e),
             }
         }
 
@@ -1735,21 +1874,21 @@ impl OpenOntologiesServer {
         let profile = input.profile.as_deref().unwrap_or("rdfs");
         let materialize = input.materialize.unwrap_or(true);
         Reasoner::run(&self.graph, profile, materialize)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_dl_explain", description = "Explain why a class is unsatisfiable using DL tableaux reasoning. Returns an explanation trace showing the logical contradictions that make the class impossible to instantiate.")]
     async fn onto_dl_explain(&self, Parameters(input): Parameters<OntoDlExplainInput>) -> String {
         use crate::tableaux::DlReasoner;
         DlReasoner::explain_class(&self.graph, &input.class_iri)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_dl_check", description = "Check if one class is subsumed by another using DL tableaux reasoning. Returns whether sub_class is a subclass of super_class, with justification.")]
     async fn onto_dl_check(&self, Parameters(input): Parameters<OntoDlCheckInput>) -> String {
         use crate::tableaux::DlReasoner;
         DlReasoner::check_subsumption(&self.graph, &input.sub_class, &input.super_class)
-            .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+            .unwrap_or_else(Self::err_json)
     }
 
     // ── v2: Lifecycle tools ─────────────────────────────────────────────────
@@ -1766,7 +1905,7 @@ impl OpenOntologiesServer {
                 self.lineage().record(&self.session_id, "P", "plan", "computed");
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1789,7 +1928,7 @@ impl OpenOntologiesServer {
                 }
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1819,7 +1958,7 @@ impl OpenOntologiesServer {
                         .record(&self.session_id, "D", "drift", "detected:kgcl");
                     report.to_cnl()
                 }
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => Self::err_json(e),
             },
             "kgcl_json" => match detector.detect_kgcl(&input.version_a, &input.version_b, threshold) {
                 Ok(report) => {
@@ -1827,14 +1966,14 @@ impl OpenOntologiesServer {
                         .record(&self.session_id, "D", "drift", "detected:kgcl_json");
                     report.to_json().to_string()
                 }
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => Self::err_json(e),
             },
             _ => match detector.detect(&input.version_a, &input.version_b) {
                 Ok(result) => {
                     self.lineage().record(&self.session_id, "D", "drift", "detected");
                     result
                 }
-                Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                Err(e) => Self::err_json(e),
             },
         }
     }
@@ -1847,7 +1986,7 @@ impl OpenOntologiesServer {
                 self.lineage().record(&self.session_id, "E", "enforce", &input.rule_pack);
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -1865,7 +2004,7 @@ impl OpenOntologiesServer {
 
         let result = monitor.run_watchers();
         self.lineage().record(&self.session_id, "M", "monitor", &result.status);
-        serde_json::to_string(&result).unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e))
+        serde_json::to_string(&result).unwrap_or_else(Self::err_json)
     }
 
     #[tool(name = "onto_monitor_clear", description = "Clear the monitor blocked flag, allowing apply operations to proceed.")]
@@ -1891,7 +2030,7 @@ impl OpenOntologiesServer {
                     })).collect::<Vec<_>>(),
                 }).to_string()
             }
-            Err(e) => format!(r#"{{"error":"Crosswalks not loaded: {}. Run scripts/build_crosswalks.py first."}}"#, e),
+            Err(e) => Self::err_json(format!("Crosswalks not loaded: {}. Run scripts/build_crosswalks.py first.", e)),
         }
     }
 
@@ -1899,7 +2038,7 @@ impl OpenOntologiesServer {
     async fn onto_enrich(&self, Parameters(input): Parameters<OntoEnrichInput>) -> String {
         match crate::clinical::ClinicalCrosswalks::load("data/crosswalks.parquet") {
             Ok(cw) => cw.enrich(&self.graph, &input.class_iri, &input.code, &input.system),
-            Err(e) => format!(r#"{{"error":"Crosswalks not loaded: {}"}}"#, e),
+            Err(e) => Self::err_json(format!("Crosswalks not loaded: {}", e)),
         }
     }
 
@@ -1907,7 +2046,7 @@ impl OpenOntologiesServer {
     fn onto_validate_clinical(&self) -> String {
         match crate::clinical::ClinicalCrosswalks::load("data/crosswalks.parquet") {
             Ok(cw) => cw.validate_clinical(&self.graph),
-            Err(e) => format!(r#"{{"error":"Crosswalks not loaded: {}"}}"#, e),
+            Err(e) => Self::err_json(format!("Crosswalks not loaded: {}", e)),
         }
     }
 
@@ -1933,22 +2072,22 @@ impl OpenOntologiesServer {
         // 1. Ingest
         let rows = match DataIngester::parse_file(&input.data_path) {
             Ok(r) => r,
-            Err(e) => return format!(r#"{{"error":"Ingest failed: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("Ingest failed: {}", e)),
         };
 
         let mapping = if let Some(ref mapping_str) = input.mapping {
             if input.inline_mapping.unwrap_or(false) {
                 match serde_json::from_str::<MappingConfig>(mapping_str) {
                     Ok(m) => m,
-                    Err(e) => return format!(r#"{{"error":"Invalid mapping: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Invalid mapping: {}", e)),
                 }
             } else {
                 match std::fs::read_to_string(mapping_str) {
                     Ok(content) => match serde_json::from_str::<MappingConfig>(&content) {
                         Ok(m) => m,
-                        Err(e) => return format!(r#"{{"error":"Invalid mapping file: {}"}}"#, e),
+                        Err(e) => return Self::err_json(format!("Invalid mapping file: {}", e)),
                     },
-                    Err(e) => return format!(r#"{{"error":"Cannot read mapping: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Cannot read mapping: {}", e)),
                 }
             }
         } else {
@@ -1959,7 +2098,7 @@ impl OpenOntologiesServer {
         let ntriples = mapping.rows_to_ntriples(&rows);
         let triples_loaded = match self.graph.load_ntriples(&ntriples) {
             Ok(c) => c,
-            Err(e) => return format!(r#"{{"error":"Failed to load triples: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("Failed to load triples: {}", e)),
         };
 
         // 2. SHACL (optional)
@@ -1970,7 +2109,7 @@ impl OpenOntologiesServer {
             } else {
                 match std::fs::read_to_string(shapes_input) {
                     Ok(c) => c,
-                    Err(e) => return format!(r#"{{"error":"Cannot read shapes: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Cannot read shapes: {}", e)),
                 }
             };
             match ShaclValidator::validate(&self.graph, &shapes) {
@@ -1989,7 +2128,7 @@ impl OpenOntologiesServer {
                         shacl_result = parsed;
                     }
                 }
-                Err(e) => return format!(r#"{{"error":"SHACL validation failed: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("SHACL validation failed: {}", e)),
             }
         }
 
@@ -2002,7 +2141,7 @@ impl OpenOntologiesServer {
                         reason_result = parsed;
                     }
                 }
-                Err(e) => return format!(r#"{{"error":"Reasoning failed: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("Reasoning failed: {}", e)),
             }
         }
 
@@ -2028,7 +2167,7 @@ impl OpenOntologiesServer {
         // is identical.
         let driver = match sqlsource::detect_driver(&input.connection) {
             Ok(d) => d,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
 
         let tables: Vec<crate::schema::TableInfo> = match driver {
@@ -2037,7 +2176,7 @@ impl OpenOntologiesServer {
                 {
                     match SchemaIntrospector::introspect_postgres(&input.connection).await {
                         Ok(t) => t,
-                        Err(e) => return format!(r#"{{"error":"Postgres connection failed: {}"}}"#, e),
+                        Err(e) => return Self::err_json(format!("Postgres connection failed: {}", e)),
                     }
                 }
                 #[cfg(not(feature = "postgres"))]
@@ -2056,8 +2195,8 @@ impl OpenOntologiesServer {
                     .await
                     {
                         Ok(Ok(t)) => t,
-                        Ok(Err(e)) => return format!(r#"{{"error":"DuckDB introspection failed: {}"}}"#, e),
-                        Err(e) => return format!(r#"{{"error":"DuckDB worker panicked: {}"}}"#, e),
+                        Ok(Err(e)) => return Self::err_json(format!("DuckDB introspection failed: {}", e)),
+                        Err(e) => return Self::err_json(format!("DuckDB worker panicked: {}", e)),
                     }
                 }
                 #[cfg(not(feature = "duckdb"))]
@@ -2071,7 +2210,7 @@ impl OpenOntologiesServer {
 
         // Validate + load
         if let Err(e) = GraphStore::validate_turtle(&turtle) {
-            return format!(r#"{{"error":"Generated Turtle invalid: {}"}}"#, e);
+            return Self::err_json(format!("Generated Turtle invalid: {}", e));
         }
 
         match self.graph.load_turtle(&turtle, Some(base_iri)) {
@@ -2083,7 +2222,7 @@ impl OpenOntologiesServer {
                 "triples": count,
                 "base_iri": base_iri,
             }).to_string(),
-            Err(e) => format!(r#"{{"error":"Failed to load: {}"}}"#, e),
+            Err(e) => Self::err_json(format!("Failed to load: {}", e)),
         }
     }
 
@@ -2098,12 +2237,12 @@ impl OpenOntologiesServer {
         // Validate connection scheme up front so we fail fast with a clear error.
         let driver = match sqlsource::detect_driver(&input.connection) {
             Ok(d) => d,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
 
         let rows = match sqlsource::query_rows(&input.connection, &input.sql).await {
             Ok(r) => r,
-            Err(e) => return format!(r#"{{"error":"SQL query failed: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("SQL query failed: {}", e)),
         };
 
         if rows.is_empty() {
@@ -2122,15 +2261,15 @@ impl OpenOntologiesServer {
             if input.inline_mapping.unwrap_or(false) {
                 match serde_json::from_str::<MappingConfig>(mapping_str) {
                     Ok(m) => m,
-                    Err(e) => return format!(r#"{{"error":"Invalid mapping JSON: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Invalid mapping JSON: {}", e)),
                 }
             } else {
                 match std::fs::read_to_string(mapping_str) {
                     Ok(content) => match serde_json::from_str::<MappingConfig>(&content) {
                         Ok(m) => m,
-                        Err(e) => return format!(r#"{{"error":"Invalid mapping file: {}"}}"#, e),
+                        Err(e) => return Self::err_json(format!("Invalid mapping file: {}", e)),
                     },
-                    Err(e) => return format!(r#"{{"error":"Cannot read mapping file: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("Cannot read mapping file: {}", e)),
                 }
             }
         } else {
@@ -2142,7 +2281,7 @@ impl OpenOntologiesServer {
         let load_result = self.graph.load_ntriples(&ntriples);
         let count = match load_result {
             Ok(c) => c,
-            Err(e) => return format!(r#"{{"error":"Failed to load triples: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("Failed to load triples: {}", e)),
         };
 
         // CDC: record new watermark if caller asked us to track one.
@@ -2189,9 +2328,9 @@ impl OpenOntologiesServer {
     async fn onto_sql_sync_state(&self, Parameters(input): Parameters<OntoSqlSyncStateInput>) -> String {
         match crate::sql_sync::get_state(&self.db, &input.sync_key) {
             Ok(Some(state)) => serde_json::to_string(&state)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
             Ok(None) => "null".to_string(),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2199,7 +2338,7 @@ impl OpenOntologiesServer {
     async fn onto_sql_sync_reset(&self, Parameters(input): Parameters<OntoSqlSyncResetInput>) -> String {
         match crate::sql_sync::reset_watermark(&self.db, &input.sync_key) {
             Ok(removed) => format!(r#"{{"removed":{}}}"#, removed),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2207,8 +2346,8 @@ impl OpenOntologiesServer {
     async fn onto_sql_sync_states_list(&self) -> String {
         match crate::sql_sync::list_states(&self.db) {
             Ok(states) => serde_json::to_string(&states)
-                .unwrap_or_else(|e| format!(r#"{{"error":"serialization: {}"}}"#, e)),
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+                .unwrap_or_else(|e| Self::err_json(format!("serialization: {}", e))),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2220,7 +2359,7 @@ impl OpenOntologiesServer {
         let source = if std::path::Path::new(&input.source).exists() {
             match std::fs::read_to_string(&input.source) {
                 Ok(s) => s,
-                Err(e) => return format!(r#"{{"error":"Failed to read source: {}"}}"#, e),
+                Err(e) => return Self::err_json(format!("Failed to read source: {}", e)),
             }
         } else {
             input.source
@@ -2232,7 +2371,7 @@ impl OpenOntologiesServer {
                 if std::path::Path::new(&t).exists() {
                     match std::fs::read_to_string(&t) {
                         Ok(s) => Some(s),
-                        Err(e) => return format!(r#"{{"error":"Failed to read target: {}"}}"#, e),
+                        Err(e) => return Self::err_json(format!("Failed to read target: {}", e)),
                     }
                 } else {
                     Some(t)
@@ -2258,7 +2397,7 @@ impl OpenOntologiesServer {
                 );
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2270,7 +2409,7 @@ impl OpenOntologiesServer {
                 self.lineage().record(&self.session_id, "AF", "align_feedback", if input.accepted { "accepted" } else { "rejected" });
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2281,7 +2420,7 @@ impl OpenOntologiesServer {
                 self.lineage().record(&self.session_id, "LF", "lint_feedback", if input.accepted { "accepted" } else { "dismissed" });
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2292,7 +2431,7 @@ impl OpenOntologiesServer {
                 self.lineage().record(&self.session_id, "EF", "enforce_feedback", if input.accepted { "accepted" } else { "dismissed" });
                 result
             }
-            Err(e) => format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => Self::err_json(e),
         }
     }
 
@@ -2318,14 +2457,16 @@ impl OpenOntologiesServer {
             }
         "#;
 
-        let result = match self.graph.sparql_select(classes_query) {
+        // Enumerating the store's classes is a question about the whole store,
+        // so read the union of all graphs, not the default graph alone.
+        let result = match self.graph.sparql_select_union(classes_query) {
             Ok(r) => r,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
 
         let parsed: serde_json::Value = match serde_json::from_str(&result) {
             Ok(v) => v,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
 
         let mut class_labels: std::collections::HashMap<String, String> = std::collections::HashMap::new();
@@ -2348,7 +2489,7 @@ impl OpenOntologiesServer {
         let trainer = crate::structembed::StructuralTrainer::new(struct_dim, struct_epochs, 0.01);
         let struct_embeddings = match trainer.train(&self.graph) {
             Ok(e) => e,
-            Err(e) => return format!(r#"{{"error":"structural training failed: {}"}}"#, e),
+            Err(e) => return Self::err_json(format!("structural training failed: {}", e)),
         };
 
         let mut embedded_count = 0;
@@ -2389,7 +2530,7 @@ impl OpenOntologiesServer {
         {
             let vecstore = self.vecstore.lock().unwrap();
             if let Err(e) = vecstore.persist() {
-                return format!(r#"{{"error":"failed to persist embeddings: {}"}}"#, e);
+                return Self::err_json(format!("failed to persist embeddings: {}", e));
             }
         }
 
@@ -2422,7 +2563,7 @@ impl OpenOntologiesServer {
             let persisted = if persist {
                 match vecstore.persist_cosine_index() {
                     Ok(()) => true,
-                    Err(e) => return format!(r#"{{"error":"persist failed: {}"}}"#, e),
+                    Err(e) => return Self::err_json(format!("persist failed: {}", e)),
                 }
             } else {
                 false
@@ -2456,7 +2597,7 @@ impl OpenOntologiesServer {
 
         let query_vec = match embedder.embed(&input.query).await {
             Ok(v) => v,
-            Err(e) => return format!(r#"{{"error":"{}"}}"#, e),
+            Err(e) => return Self::err_json(e),
         };
 
         let mut vecstore = self.vecstore.lock().unwrap();
@@ -2531,17 +2672,18 @@ impl OpenOntologiesServer {
         {
         let vecstore = self.vecstore.lock().unwrap();
 
-        let text_a = vecstore.get_text_vec(&input.iri_a);
-        let text_b = vecstore.get_text_vec(&input.iri_b);
+        // Owned loads, so this works under text-vector eviction too.
+        let text_a = vecstore.load_text_vec(&input.iri_a);
+        let text_b = vecstore.load_text_vec(&input.iri_b);
         let struct_a = vecstore.get_struct_vec(&input.iri_a);
         let struct_b = vecstore.get_struct_vec(&input.iri_b);
 
         if text_a.is_none() || text_b.is_none() {
-            return format!(r#"{{"error":"IRI not found in embeddings. Run onto_embed first. Missing: {}"}}"#,
-                if text_a.is_none() { &input.iri_a } else { &input.iri_b });
+            return Self::err_json(format!("IRI not found in embeddings. Run onto_embed first. Missing: {}",
+                if text_a.is_none() { &input.iri_a } else { &input.iri_b }));
         }
 
-        let cos = crate::poincare::cosine_similarity(text_a.unwrap(), text_b.unwrap());
+        let cos = crate::poincare::cosine_similarity(&text_a.unwrap(), &text_b.unwrap());
         let poinc = if let (Some(a), Some(b)) = (struct_a, struct_b) {
             crate::poincare::poincare_distance(a, b)
         } else {

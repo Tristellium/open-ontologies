@@ -1,6 +1,9 @@
 pub mod align;
 pub mod align_fuzzy;
 pub mod batch;
+pub mod connect;
+pub mod daemon;
+pub mod output;
 pub mod borderline_loop;
 pub mod buffer;
 pub mod cache;
@@ -55,6 +58,8 @@ pub mod plan;
 pub mod plan_classical;
 pub mod plan_pddl;
 pub mod plan_validate;
+#[cfg(feature = "plugins")]
+pub mod plugins;
 #[cfg(feature = "embeddings")]
 pub mod poincare;
 pub mod reason;
@@ -79,6 +84,8 @@ pub mod state;
 pub mod structembed;
 pub mod tableaux;
 pub mod toolfilter;
+#[cfg(feature = "turbovec")]
+pub mod turbo_index;
 #[cfg(feature = "embeddings")]
 pub mod vecstore;
 pub mod webhook;

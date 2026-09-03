@@ -32,8 +32,22 @@ const RDFS_DOMAIN: &str = "<http://www.w3.org/2000/01/rdf-schema#domain>";
 const RDFS_RANGE: &str = "<http://www.w3.org/2000/01/rdf-schema#range>";
 const OWL_TRANSITIVE: &str = "<http://www.w3.org/2002/07/owl#TransitiveProperty>";
 const OWL_SYMMETRIC: &str = "<http://www.w3.org/2002/07/owl#SymmetricProperty>";
+const OWL_FUNCTIONAL: &str = "<http://www.w3.org/2002/07/owl#FunctionalProperty>";
+const OWL_INVERSE_FUNCTIONAL: &str = "<http://www.w3.org/2002/07/owl#InverseFunctionalProperty>";
 const OWL_INVERSE: &str = "<http://www.w3.org/2002/07/owl#inverseOf>";
 const OWL_SAMEAS: &str = "<http://www.w3.org/2002/07/owl#sameAs>";
+
+/// Classes whose assertion `p rdf:type <class>` gives an EXISTING property a new
+/// characteristic, changing what the store already entails over that property's
+/// existing edges. Like the schema predicates, such a delta is not incremental:
+/// the semi-naive loop only revisits triples reachable from the delta frontier,
+/// so a newly-declared characteristic never reprocesses the edges it now governs.
+const PROPERTY_CHARACTERISTICS: [&str; 4] = [
+    OWL_TRANSITIVE,
+    OWL_SYMMETRIC,
+    OWL_FUNCTIONAL,
+    OWL_INVERSE_FUNCTIONAL,
+];
 const OWL_EQUIV_CLASS: &str = "<http://www.w3.org/2002/07/owl#equivalentClass>";
 const OWL_EQUIV_PROP: &str = "<http://www.w3.org/2002/07/owl#equivalentProperty>";
 
@@ -64,7 +78,16 @@ struct Schema {
     transitive: HashSet<String>,
     symmetric: HashSet<String>,
     inverses: HashMap<String, Vec<String>>,
+    /// True if any schema-reading query hit its row cap, so the schema this
+    /// closure was computed against is incomplete and the derived closure may be
+    /// missing consequences. Surfaced, never swallowed.
+    truncated: bool,
 }
+
+/// The row cap on every internally-authored scan here. A scan that returns
+/// exactly this many rows is reported as possibly truncated rather than assumed
+/// complete.
+const SCAN_LIMIT: usize = 100_000;
 
 fn close(direct: &HashMap<String, HashSet<String>>) -> HashMap<String, HashSet<String>> {
     let mut out: HashMap<String, HashSet<String>> = HashMap::new();
@@ -94,11 +117,20 @@ impl Schema {
     /// most, so they are fetched directly and everything else is joined on
     /// demand.
     fn read(graph: &Arc<GraphStore>) -> anyhow::Result<Self> {
+        // Any scan that returns exactly SCAN_LIMIT rows may have been cut. Record
+        // it so the caller can report an incomplete closure instead of a wrong one
+        // presented as complete.
+        let truncated = std::cell::Cell::new(false);
         let pairs = |pred: &str| -> anyhow::Result<Vec<(String, String)>> {
-            let q = format!("SELECT ?s ?o WHERE {{ ?s {pred} ?o }} LIMIT 100000");
-            let raw = graph.sparql_select(&q)?;
+            let q = format!("SELECT ?s ?o WHERE {{ ?s {pred} ?o }} LIMIT {SCAN_LIMIT}");
+            // The schema is a question about the whole store: subclass/domain/range
+            // axioms may sit in any named graph (a TriG/N-Quads load, a per-version
+            // schema graph), so read the union, not the default graph alone. Reading
+            // the default graph made incremental reasoning derive nothing for a store
+            // whose schema was not in the default graph, and label it complete.
+            let raw = graph.sparql_select_union(&q)?;
             let parsed: serde_json::Value = serde_json::from_str(&raw)?;
-            Ok(parsed
+            let rows: Vec<(String, String)> = parsed
                 .get("results")
                 .and_then(|r| r.as_array())
                 .map(|rows| {
@@ -111,13 +143,18 @@ impl Schema {
                         })
                         .collect()
                 })
-                .unwrap_or_default())
+                .unwrap_or_default();
+            if rows.len() >= SCAN_LIMIT {
+                truncated.set(true);
+            }
+            Ok(rows)
         };
         let typed = |cls: &str| -> anyhow::Result<HashSet<String>> {
-            let q = format!("SELECT ?s WHERE {{ ?s {RDF_TYPE} {cls} }} LIMIT 100000");
-            let raw = graph.sparql_select(&q)?;
+            let q = format!("SELECT ?s WHERE {{ ?s {RDF_TYPE} {cls} }} LIMIT {SCAN_LIMIT}");
+            // Property-characteristic declarations are schema, read from every graph.
+            let raw = graph.sparql_select_union(&q)?;
             let parsed: serde_json::Value = serde_json::from_str(&raw)?;
-            Ok(parsed
+            let rows: HashSet<String> = parsed
                 .get("results")
                 .and_then(|r| r.as_array())
                 .map(|rows| {
@@ -125,7 +162,11 @@ impl Schema {
                         .filter_map(|r| Some(r.get("s")?.as_str()?.to_string()))
                         .collect()
                 })
-                .unwrap_or_default())
+                .unwrap_or_default();
+            if rows.len() >= SCAN_LIMIT {
+                truncated.set(true);
+            }
+            Ok(rows)
         };
 
         let mut sub_class: HashMap<String, HashSet<String>> = HashMap::new();
@@ -168,6 +209,7 @@ impl Schema {
             transitive: typed(OWL_TRANSITIVE)?,
             symmetric: typed(OWL_SYMMETRIC)?,
             inverses,
+            truncated: truncated.get(),
         })
     }
 }
@@ -175,11 +217,18 @@ impl Schema {
 impl IncrementalReasoner {
     /// Whether an addition can be reasoned over incrementally, and why not.
     pub fn applies_to(delta: &[Triple]) -> Result<(), String> {
-        for (_, p, _) in delta {
+        for (_, p, o) in delta {
             if SCHEMA_PREDICATES.contains(&p.as_str()) {
                 return Err(format!(
                     "{p} is a schema axiom: it changes what the existing store entails, \
                      so the closure must be recomputed with onto_reason"
+                ));
+            }
+            if p == RDF_TYPE && PROPERTY_CHARACTERISTICS.contains(&o.as_str()) {
+                return Err(format!(
+                    "{o} declares a property characteristic: it changes what the existing \
+                     store entails over that property's existing edges, which the delta \
+                     cannot reach, so the closure must be recomputed with onto_reason"
                 ));
             }
         }
@@ -209,8 +258,10 @@ impl IncrementalReasoner {
             } else {
                 format!("SELECT ?x WHERE {{ ?x {pred} {term} }} LIMIT 10000")
             };
+            // The neighbours of a delta term are instance edges that may live in any
+            // named graph, so this store-question reads the union too.
             graph
-                .sparql_select(&q)
+                .sparql_select_union(&q)
                 .ok()
                 .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
                 .and_then(|v| v.get("results").and_then(|r| r.as_array()).cloned())
@@ -277,8 +328,10 @@ impl IncrementalReasoner {
                         }
                     }
                     if p == OWL_SAMEAS && o.starts_with('<') {
+                        // The subject's existing triples are a question about the
+                        // whole store, so read every graph, not the default alone.
                         let q = format!("SELECT ?p ?v WHERE {{ {s} ?p ?v }} LIMIT 10000");
-                        if let Ok(raw) = graph.sparql_select(&q)
+                        if let Ok(raw) = graph.sparql_select_union(&q)
                             && let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw)
                         {
                             {
@@ -317,7 +370,7 @@ impl IncrementalReasoner {
             .map(|(s, p, o)| format!("{s} {p} {o}"))
             .collect();
 
-        Ok(serde_json::json!({
+        let mut out = serde_json::json!({
             "ok": true,
             "incremental": true,
             "delta_triples": delta.len(),
@@ -325,8 +378,16 @@ impl IncrementalReasoner {
             "rounds": rounds,
             "materialized": materialize && !derived.is_empty(),
             "sample_inferences": sample,
-        })
-        .to_string())
+            "complete": !schema.truncated,
+        });
+        if schema.truncated {
+            out["warning"] = serde_json::Value::String(format!(
+                "a schema scan hit the {SCAN_LIMIT}-row cap, so the schema this closure was \
+                 computed against is incomplete and consequences may be missing; run onto_reason \
+                 for a full pass"
+            ));
+        }
+        Ok(out.to_string())
     }
 }
 
@@ -347,4 +408,39 @@ pub fn parse_ntriples(text: &str) -> Vec<Triple> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn t(s: &str, p: &str, o: &str) -> Triple {
+        (s.to_string(), p.to_string(), o.to_string())
+    }
+
+    #[test]
+    fn schema_axiom_deltas_are_refused() {
+        // A new subClassOf changes what the existing store entails.
+        assert!(IncrementalReasoner::applies_to(&[t("<x>", RDFS_SUBCLASS, "<y>")]).is_err());
+    }
+
+    #[test]
+    fn a_new_property_characteristic_is_not_incremental() {
+        // Declaring an EXISTING property transitive/symmetric/functional retroactively
+        // changes what its existing edges entail; the delta frontier cannot reach them,
+        // so this must route to a full onto_reason rather than silently under-derive.
+        for c in [OWL_TRANSITIVE, OWL_SYMMETRIC, OWL_FUNCTIONAL, OWL_INVERSE_FUNCTIONAL] {
+            assert!(
+                IncrementalReasoner::applies_to(&[t("<p>", RDF_TYPE, c)]).is_err(),
+                "declaring {c} must be refused as non-incremental"
+            );
+        }
+    }
+
+    #[test]
+    fn an_ordinary_type_assertion_is_still_incremental() {
+        // A normal individual typing is exactly what incremental reasoning is for.
+        assert!(IncrementalReasoner::applies_to(&[t("<a>", RDF_TYPE, "<C>")]).is_ok());
+        assert!(IncrementalReasoner::applies_to(&[t("<a>", "<http://ex/knows>", "<b>")]).is_ok());
+    }
 }

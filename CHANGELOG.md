@@ -4,6 +4,666 @@ All notable changes to Open Ontologies are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **The DL reasoner discovered entities by their typing declarations rather than
+  by the axioms that use them, and its headline `consistent` flag answered for
+  the TBox alone.** Three defects, one root cause, found from the outside by
+  probing the shipped binary with deliberately broken ontologies rather than by
+  reading the code. A class declared only through `rdfs:subClassOf`,
+  `owl:equivalentClass` or `owl:disjointWith` - never typed `owl:Class` - was
+  invisible to the satisfiability sweep, so an unsatisfiable class was reported
+  satisfiable by omission. An individual typed into a plain class - never typed
+  `owl:NamedIndividual`, which instance data in the wild almost never is - never
+  reached the ABox check, so the textbook inconsistency of one individual in two
+  disjoint classes sailed through. And even when the ABox check DID prove an
+  inconsistency, `reason owl-dl` published `"consistent": true` in the same JSON
+  object as the proof of false, because the flag was computed from the TBox
+  alone. Classes are now harvested from all three axiom positions, individuals
+  from any rdf:type pointing at a known class (with schema declarations
+  excluded, so a class never doubles as an individual), and the headline flag is
+  the conjunction of TBox and ABox verdicts, with `tbox_consistent` exposed
+  separately. The three-valued discipline is preserved: an undecided ABox still
+  defaults to consistent. The probes that exposed all three are preserved as
+  regressions in `tests/tableaux_discovery_test.rs`.
+- **Three more tools answered about the default graph alone, so their answers
+  depended on the serialisation the data arrived in.** Same defect as the two
+  halves of #108, found by loading identical content as Turtle and as TriG and
+  comparing the reports rather than by reading the code. `onto_vocab_check`
+  read zero declared terms from an ontology loaded as TriG or N-Quads and
+  bailed with a warning telling the caller to load an ontology they had already
+  loaded. `onto_communities` reported no communities and the note "no relations
+  between named subjects and objects", asserting a fact about the corpus it had
+  not checked. Shape induction counted no instances and returned an empty
+  lattice, indistinguishable from a class that genuinely has none. All three now
+  read the union of every graph. `tests/serialisation_invariance_test.rs` pins
+  the rule and names the modules still unmeasured, since roughly thirty run
+  internally authored SELECTs and only four have been checked (#108).
+- **`onto_shacl` validated the default graph and nothing else, so whether data
+  was checked at all depended on the serialisation it arrived in.** Every
+  data-side query ran through the store's default dataset specification, which
+  is the default graph alone, so an ontology and its instances loaded from
+  Turtle validated while the identical triples loaded from TriG or N-Quads
+  selected no focus nodes: `focus_nodes: 0`, `unmatched_shapes` populated, and
+  the `nothing_matched` null verdict. That is a truthful answer to a question
+  nobody asked, which is why it never arrived as a bug report. The data-side
+  queries now read the union of every graph in the store, added as
+  `GraphStore::sparql_select_union` so the plain `sparql_select` keeps the
+  dataset a hand-written query expects. `GRAPH ?g` still ranges over the named
+  graphs, so nothing written against the old form changes meaning.
+  **This can turn a null or a vacuous pass into a real `conforms: false`**,
+  which is the point: the violations were always there and were not being
+  looked at. Reports now carry `scope`, today always `all_graphs`, so a verdict
+  says what it selected over before temporal scoping makes that vary (#108).
+- **A constraint asserted on the node shape itself was never evaluated and
+  never reported, so `sh:closed true` over data carrying an undeclared
+  predicate returned `conforms: true`.** The check that routes unimplemented
+  constraints to `skipped_constraints` reached one `sh:property` hop below the
+  shape and no further: `sh:closed`, a node-level `sh:not`, `sh:nodeKind`,
+  `sh:and`, `sh:or`, `sh:xone`, `sh:in` and `sh:node` never bound the
+  predicate it inspects. A second complement now covers the shape node, with a
+  whitelist of the predicates the validator reads there (the target forms,
+  `sh:property`, `sh:sparql`) plus the annotation predicates, which are never
+  constraints, so any other `sh:` predicate lands in `skipped_constraints` and
+  the verdict becomes null. The shape is bound as a query variable and matched
+  to the discovered shape, not spliced into the query text: a shape written
+  `[] a sh:NodeShape` is a blank node, and a blank-node label inside a SPARQL
+  query is a wildcard, not a name. The complement runs once per shape rather
+  than once per target class, so a node constraint is recorded once.
+  `sh:deactivated` is among them on purpose: a deactivated shape is still
+  evaluated here, so the predicate is not honoured and must not read as if it
+  were. The complement is restricted to the `sh:` namespace, because an
+  implicit class target carries its own class axioms on the same subject and
+  those are not constraints. A test now asserts the null verdict is reachable
+  from the node shape, from a property shape and from a target, each naming
+  its construct, so the next construct added has somewhere obvious to fail.
+  Two predicates are exempt at a false value and only at a false value:
+  `sh:closed false` is the SHACL default and restricts nothing, and
+  `sh:deactivated false` asks for the evaluation this validator performs, so
+  both are honoured in full and neither may suppress the verdict. A null on a
+  run where nothing went unevaluated is a false undetermined, and it costs
+  what the false clean costs, since a null that fires on a complete run
+  teaches the reader to ignore null. The value is read by value rather than by
+  lexical form, and a control whose value is not a boolean at all stays
+  skipped, because a value this validator cannot read is not one it can
+  honour (#108).
+- **`onto_shacl_check` reported a class or property declared inside a named
+  graph as missing.** The three existence lookups behind `missing_target_class`,
+  `missing_class_constraint` and `missing_path` ran a bare triple pattern, whose
+  default dataset is the default graph only, so an ontology loaded from TriG or
+  N-Quads, where every declaration sits in a `GRAPH` block, produced one issue
+  per referenced term while the same data in Turtle produced none. A declaration
+  is a declaration wherever it lives: the lookups now read the union of the
+  default graph and every named graph, unconditionally, with no scope argument
+  and no new response key. A class declared in no graph at all is still flagged
+  (#108).
+- **A daemon started with `[http] token` in config rejected every command it was
+  meant to serve.** `serve-http` falls back to the config token and then enforces
+  bearer auth, but `daemon start` recorded `token: null` in `daemon.json`
+  whenever no `--token` flag or env var was given. Every proxied command then
+  sent no `Authorization` header to a daemon demanding one, got 401, and the
+  client treated that as fatal, so a single `daemon start` turned the whole CLI
+  into an error until `daemon stop`. The token is now resolved the way the child
+  will resolve it, from a config path both sides are given explicitly, and a
+  daemon that still rejects the client is announced on stderr and fallen back
+  from rather than being fatal.
+- **`--data-dir` was ignored by the server arms, so a daemon could serve a
+  different store than the one its caller was using.** Both `serve` and
+  `serve-http` derived their data directory from `[general] data_dir` in config
+  and dropped the flag, so `--data-dir /custom daemon start` wrote `daemon.json`
+  into `/custom` while the daemon it started served `~/.open-ontologies`. Proxied
+  and local commands then saw different data with nothing to indicate it, and
+  only when the two paths differed, which is why it survived casual use. The flag
+  now takes precedence over config, matching how host, port and token already
+  resolved.
+- **`push` could not run at all while a daemon was up.** It was serialized for
+  proxying but had no arm in `BatchRunner::execute`, so it fell through to
+  `unknown batch command` and exited 1 — the only proxy-able command with no
+  handler. Running it locally instead would have been worse than the error, since
+  the store holding the triples worth pushing is the daemon's. A test now asserts
+  that every command the CLI proxies is one the batch runner answers to, because
+  the two sides are matched by string across an HTTP boundary and nothing else
+  checked that they agreed.
+- **Relative paths resolved against the daemon's working directory rather than
+  the caller's.** The daemon inherits wherever `daemon start` ran and never
+  learns where its caller is, so `cd /data && open-ontologies load ./x.ttl`
+  either failed or loaded a different file, and `save ./out.ttl` wrote somewhere
+  the caller was not looking. Path arguments are made absolute before they are
+  sent.
+- **A multi-line or awkwardly quoted argument was destroyed in transit to the
+  daemon.** Commands were proxied as a command line that the daemon
+  re-tokenized, and `parse_lines` splits on newlines before it looks at quotes,
+  so a multi-line SPARQL query — the normal kind — arrived torn across lines and
+  failed as an unterminated quote while the identical command succeeded locally.
+  The double-quote fallback in the quoting helper also failed to escape
+  backslashes, mangling any argument carrying both quote styles. Commands are now
+  proxied in the structured form, one argument per array element, where neither
+  is possible.
+- **A successful `daemon start` reported the daemon it had just started as
+  dead.** The human renderer guessed which command produced a payload by
+  sniffing its keys, and `{ok, pid, url}` matched a branch written for
+  `daemon status` — a branch that defaults liveness to false. That branch now
+  requires an explicit `alive`, and on the proxy path the renderer dispatches on
+  the command name the batch envelope already carries instead of guessing.
+- **`marketplace` answered with a different catalogue depending on whether a
+  daemon was running.** The command has two implementations behind it, the local
+  one and the batch one that serves it when a daemon is up, and they had drifted:
+  the batch copy consulted only the curated catalogue and never loaded community
+  packs, so `marketplace list` lost the community tier and `marketplace install`
+  refused a community id, with nothing to indicate why. Both now go through
+  `marketplace::cli_list` and `marketplace::cli_resolve`. The MCP tool keeps its
+  own richer shape, which reports urls, maintainers and shadowing warnings, and
+  is documented as a separate surface rather than a third copy of this one.
+- **`/api/batch` opened the state database on every request.** The route built a
+  fresh `StateDb` per call, on the exact hot path the daemon exists to
+  accelerate, while the adjacent `/lineage` route already cloned the handle
+  opened at startup. It now clones the same one.
+- **`temporal:recordedUntil` closes the transaction interval, so `as_of`
+  answers what was believed then.** The recorded axis only ever narrowed
+  forward: with no upper bound, `as_of = now` returned the union of every
+  version ever recorded rather than the current belief, and after the first
+  correction a snapshot showed an assertion beside the one that replaced it.
+  `validities()` now reads the predicate as a fourth UNION branch and
+  `recorded_by` is two-sided, half-open like `[validFrom, validTo)`.
+
+  Exclusions are reported on the side they fall: a graph recorded after the
+  audit instant still says `not yet recorded then`, one whose recorded interval
+  has closed says `no longer recorded then`. Those are opposite facts and a
+  single reason string flattened them.
+
+  Additive. A store that does not write `recordedUntil` is unchanged, including
+  its cap arithmetic — the validity scan counts ROWS, so only a graph that
+  actually carries the fourth predicate costs a fourth row. For stores that do,
+  the 20,000-row cap covers roughly 5,000 fully described graphs where it
+  covered roughly 6,700 with three predicates; there is a test that proves the
+  cost rather than asserting it in a comment.
+- **`onto_temporal_conflicts` stops calling every non-overlapping pair a
+  correction.** The check is `!overlaps`, which proves the two periods share no
+  instant and nothing more. It does not establish that one assertion replaced
+  the other -- the data carries no link that would -- and the same bucket also
+  holds pairs separated by a GAP, which is missing coverage rather than
+  history. The results now come back under `non_overlapping` /
+  `non_overlapping_count`, and the `note` says what was checked instead of
+  claiming adjacency the code never tested -- including the comparison that
+  backs it. When this landed, bounds were still compared as text, so two
+  periods written with different timezone offsets could share an hour and
+  still land in `non_overlapping`; a conformance test pinned that so the
+  parsed-time work would turn it into a contradiction as a diff rather than a
+  new assertion. Bounds are now read as instants (see Changed below), offsets
+  are honoured, that test has flipped on the lines that held the old answer,
+  and the note says the comparison is on instants.
+
+  `superseded` / `superseded_count` are still emitted, unconditionally and
+  behind no flag, carrying exactly the same rows until 2.0. Deprecated, not
+  renamed: when lineage-backed supersession arrives it takes a new key, so no
+  key ever names a different set on either side of a major version.
+- **A period that holds at no instant no longer overlaps anything** (#118).
+  `Period::overlaps` answered true for `[t, t)` against any period containing
+  `t`, and unconditionally against an open one, while `valid_at` was false at
+  every instant for it, so `onto_temporal_conflicts` filed such a graph as a
+  live contradiction where `onto_temporal_snapshot` excluded it everywhere; an
+  inverted `[t2, t1)` with `t2 > t1` was filed as `non_overlapping`, a graph
+  that holds nowhere presented beside a live one. The case that made it worth
+  fixing is the one parsing created: `validFrom "2024"^^xsd:gYear` beside
+  `validTo "2024-01-01"^^xsd:date` is two careful assertions from two systems
+  writing at different precision, invisible on inspection, and it resolved as
+  sound. The classification now happens once, where the bounds are read:
+  `Bounds::resolve` yields a third `GraphValidity` beside sound and
+  unreadable, the snapshot answers from the variant, `overlaps` from the flag
+  the period carries, `valid_at` is never asked about such a period, and the
+  two tools agree by construction. With no `valid_at` such a graph is in scope
+  like any other, because no instant was asked about and narrowing an
+  atemporal query silently is worse than answering it, so `onto_temporal_query`
+  with no `valid_at` still reads it; at any instant asked about it is excluded.
+  Validity is checked before the recorded side: with a `valid_at` given,
+  "holds at no instant" beats "not yet recorded then" whatever `as_of` is
+  passed, since only the first is a fact about the data rather than about the
+  query; with none given, the recorded reason is the only one that can apply.
+
+  Not `invalid`: both bounds parsed, and every reason in that array says a
+  bound could not be read. The graph is EXCLUDED at every instant asked about,
+  with a reason that says it holds at no instant and names which of the two it
+  is, since validFrom equalling validTo is sometimes intended and validTo
+  preceding validFrom almost never is. In
+  `conflicts` the pair lands in `non_overlapping`, a true statement that since
+  the rename above claims no correction, and the `note` says the bucket can
+  hold such a period. The recorded axis is not classified this way here:
+  `recordedUntil` before `recordedAt` is out-of-order recording (#109) and
+  lands separately.
+
+- **`open-ontologies-lite` no longer installs an MCP server with the library**
+  (released as 0.5.0). `mcp` was a core dependency of a package that imports it
+  in exactly one module, `server.py`, so every consumer of the library API
+  installed a server they had not asked for.
+
+  That was not only weight. `mcp` pulls `starlette`, and forcing that upgrade
+  makes a resolver re-solve the whole environment. Measured against a semantica
+  0.6.6 checkout: `pip install open-ontologies-lite==0.4.0` **uninstalled
+  fastapi**, and every import of that project's web layer then failed with
+  `ModuleNotFoundError`. Three of its security-regression tests went from
+  passing to erroring on that alone.
+
+  To be precise about the cause, because the first version of this note was not:
+  a current fastapi does accept the starlette that `mcp` wants, verified as
+  fastapi 0.141.1 beside starlette 1.6.0 in a clean environment. The breakage is
+  what the upgrade does to an environment that already holds a pinned or older
+  fastapi, which is what a real project has. Either way the fix is the same, and
+  a package whose job is verifying someone else's graph has no business
+  re-solving their web layer to do it.
+
+  `mcp` moves behind a `server` extra, which the console script and
+  `python -m open_ontologies_lite` need and the library API does not.
+  `server.py` names the extra when it is missing rather than failing on a bare
+  import line. A test runs the library API in a fresh interpreter with `mcp`
+  forced unavailable. 0.5.0 rather than 0.4.1 because the install line changes
+  for anyone who relied on the bare install giving them the server, even though
+  no API moved.
+
+- **JSON-LD is read and written like any other serialisation.** `oxrdfio` has
+  supported it all along, but the engine's format handling did not: `parse_format`
+  had no JSON-LD arm, and `detect_format` fell back to Turtle for any extension it
+  did not recognise, so a `.jsonld` document was handed to the Turtle parser and
+  died on `{ is not a valid predicate` — an error that names the wrong problem and
+  sends you looking at a file that was never broken. `.jsonld` and `.json` now map
+  to JSON-LD, `parse_format` accepts `jsonld`, `json-ld` and `json` (`json-ld` is
+  the W3C media-type spelling and what most other tooling takes, so rejecting it
+  turned a correct format name into an error), and the body sniffer recognises a
+  JSON-LD document published under a misleading extension. The sniff requires an
+  opening `{` or `[` *and* a `"@context"`, `"@id"` or `"@graph"` keyword: a bare
+  brace proves nothing, since TriG opens its default graph block with `{` and
+  Turtle admits `[` as a blank-node subject. `tests/graph_jsonld_test.rs`.
+  The Python package had the mirror defect, accepting `jsonld` while rejecting
+  `json-ld`; both spellings and `json` now resolve.
+
+- **The compile cache no longer flattens named graphs** (issue #112). It was
+  written as N-Triples, a format that cannot carry a graph name, so the cached
+  artefact was not equivalent to the source it stood for: a dataset went in and
+  a flattened graph came out. The first load parsed the source and answered
+  correctly; every load after it read the cache back and returned a store with
+  no named graphs at all. Measured on an unchanged TriG file, twice through
+  `onto_load`: `origin: "source"` gave two named graphs, `origin: "cache"` gave
+  none, and `onto_temporal_snapshot` reported `{"ok": true, "in_scope": []}` —
+  a clean, confident, empty answer.
+
+  The freshness key `(source_path, mtime, size, sha256)` was never at fault and
+  is unchanged; the cache was correctly judged fresh, and what it held was
+  wrong. A second path needed no second load at all: an idle-evicted ontology
+  reloads through `ensure_loaded`, from that same flattened file, so a
+  long-running `serve-http --idle-ttl-secs` lost its named graphs by being
+  idle.
+
+  Cache files are now N-Quads (`.nq`) — line-based and just as fast to parse,
+  which was the reason N-Triples was chosen, but able to name a graph. The
+  extension doubles as the format marker: an entry pointing at a `.nt` file was
+  written before this fix, holds a flattened dataset, and is recompiled instead
+  of read. That costs one re-parse per ontology, once, and heals warm caches
+  rather than leaving them quietly wrong. Anything whose meaning lives in the
+  graph name is affected — the bi-temporal tools above all, which read
+  `GRAPH ?g` and saw an empty store. Three tests in `tests/registry_test.rs`,
+  each loading TWICE on purpose: a test that loads once passes on the broken
+  code, which is why this went unnoticed.
+
+- **Named graphs are preserved when exporting to TriG and N-Quads.**
+  `GraphStore::serialize` rendered every format with `serialize_triple`, which
+  flattens a quad from a named graph into the default graph. Import and the
+  persistent store keep graph names, so the loss was export-only — but it meant
+  a TriG save/reload round trip dropped the named-graph structure that
+  bi-temporal assertions live in (issue #95): every `validFrom`/`validTo`
+  binding on `onto_save`/`onto_convert` output was silently gone. The dataset
+  formats now serialize quads; the triple formats (Turtle, N-Triples, RDF/XML)
+  keep flattening, which is the only thing they can represent. TriG and N-Quads
+  round-trip tests in `tests/graph_named_graph_roundtrip_test.rs`.
+
+- **The bi-temporal tools say when a scan was cut short.** Four queries behind
+  `onto_temporal_snapshot`, `onto_temporal_query` and `onto_temporal_conflicts`
+  are capped — 20,000 validity rows, 20,000 named graphs, 10,000 result rows,
+  5,000 disjointness pairs — and a store that reached one got a confident
+  answer with nothing to say it was partial (issue #95). Every response now
+  carries `complete`, and a cut run also carries `truncated`: one
+  `{scan, limit, consequence}` entry per cap that bit.
+
+  Truncating a result list gives you fewer rows. Truncating the validity scan
+  gives you a WRONG answer, so those responses also carry a `warning`. A graph
+  whose validity rows fell past the cap reads as having no validity at all, and
+  an undescribed graph is timeless and always in scope — the opposite of the
+  truth for a graph whose period had ended. In `onto_temporal_conflicts` the
+  same gap is a false positive rather than a gap: a timeless period overlaps
+  everything, so a superseded correction is republished as a live
+  contradiction, which is the one thing that tool exists to prevent.
+  `onto_temporal_query` inherits the verdict from the scope it ran over,
+  including on the empty-scope path, where "no graphs in scope" may mean
+  nothing among the graphs that were read.
+
+  Detection is proof rather than inference: each scan is sent with `LIMIT n+1`
+  and the extra row, if it arrives, is evidence that more exist. It is dropped
+  before the response is built, so a store holding exactly the cap is reported
+  as complete, and every untruncated response keeps its 1.2.0 values. 10 tests
+  in `src/temporal.rs`, including one pinning an exactly-full scan as NOT
+  truncated and one showing a correction turn into a false contradiction when
+  the validity scan is cut.
+
+### Changed
+- **Temporal bounds are read as instants on the UTC timeline, not compared as
+  text** (issue #95). `onto_temporal_snapshot`,
+  `onto_temporal_query` and `onto_temporal_conflicts` accept `xsd:date`,
+  `xsd:dateTime`, `xsd:gYearMonth` and `xsd:gYear`; a less precise bound names
+  the FIRST instant of the period it names, so `"2026-05-01"^^xsd:date` as a
+  `validTo` excludes the whole of 1 May and `"2026"^^xsd:gYear` as a
+  `validFrom` starts at midnight on 1 January. A value with no timezone offset
+  is UTC: XSD leaves such a value only partially ordered against one that
+  carries an offset, and "indeterminate" is not an answer a register query can
+  return. All four axes are read this way, `recordedUntil` included: a closing
+  bound written with an offset or at month precision closes the recorded
+  interval where its instant falls, not where its text sorts, and one that
+  matches no grammar makes the graph invalid by the same rule as the other
+  three. Every response now carries `semantics_version` (`temporal/2`), since
+  the same store answers differently under the two readings and an answer that
+  does not say which produced it cannot be replayed or hashed.
+
+  A fractional second is refused only when a digit past the ninth is NONZERO.
+  A zero tail is not extra precision: `.1234567890` is 123,456,789 nanoseconds
+  exactly and names the instant `.123456789` names, so refusing it made two
+  spellings of one instant answer differently, the thing this change resolves
+  everywhere else. Fixed-width formatters pad to a fixed digit count, so the
+  tail arrives from machines rather than from typos, and it reaches both the
+  store bounds and the `valid_at` / `as_of` arguments. Bounds typed
+  `^^xsd:dateTime` were shielded by the store's own canonicalisation; bare and
+  `xsd:string` bounds (the form this module documents as supported, and the
+  form the conformance corpus is written in) were not.
+
+  **Same-precision data with four-digit years, no offsets and no sub-nanosecond
+  fractions answers exactly as it did.** That is the constraint this was built
+  against, and the divergence is narrower than it sounds: for a coarse value
+  and a fine one where the coarse is a lexical prefix of the fine, text said
+  "earlier" and instants say "equal", so mixed precision moves ONLY at the
+  boundary instant. The inputs whose answers move:
+
+  - **Mixed precision at a boundary.** A date-typed `validTo` against a
+    `dateTime` instant at midnight now excludes its own day instead of
+    admitting it. Same on the recorded axis: an `as_of` at date precision
+    against a `recordedAt` of `T00:00:00Z` on the same day now sees the record,
+    which is the inclusive cutoff the tool documents and text comparison
+    quietly did not deliver.
+  - **Bounds carrying an offset.** `"2026-05-01T00:00:00+02:00"` is
+    `2026-04-30T22:00:00Z` and is now compared there, rather than sorting after
+    every `2026-04-…` string.
+  - **Years that are not four digits.** `"20241-01-01"` and `"-0044-03-15"` now
+    order by year rather than by first character, so a graph bounded by one is
+    in scope inside its own interval instead of nowhere.
+  - **Bounds that match none of the four grammars** (a foreign datatype, a
+    language tag, `"01/05/2026"`, `"2024-1-1"`, a calendar-impossible
+    `"2024-02-30"`, a fraction finer than a nanosecond) make the graph
+    INVALID. It is reported in a new `invalid` array with a per-graph reason,
+    excluded from `in_scope`, and above all NOT timeless: "we hold no
+    valid-time claim about this" and "the claim is garbage" are different
+    answers. Previously such a bound was compared as raw text, so
+    `"01/05/2026"` sorted before every ISO value in the store and its graph
+    read as valid since the beginning of time.
+  - **Two different instants on one axis.** Previously the last row of the
+    validity query's UNION won and the other value vanished, on an order the
+    query never contracted. The graph is now invalid and both values are
+    named: choosing one, or the min, or the max, would publish an interval
+    nobody asserted. Two SPELLINGS of one instant (a bare `"2024-01-01"` beside
+    `"2024-01-01"^^xsd:date`, which is what a half-finished migration leaves)
+    still resolve to that one instant: they invent nothing. So do a coarse
+    bound and a fine one naming the same instant, `"2024"^^xsd:gYear` beside
+    `"2024-01-01"^^xsd:date`, because agreement is judged on the instants and
+    not on the strings; the row shows the lexically first form.
+  - **`valid_at` / `as_of` that cannot be read** are now refused rather than
+    ignored. Silently dropping one answered a question nobody asked, with the
+    whole store in scope and nothing saying why.
+  - **`onto_temporal_conflicts`** gains `undecided` and `undecided_count` for
+    pairs where a graph's temporal metadata could not be read on at least one
+    axis, so the graph is invalid and the pair is classified neither way. An
+    unreadable period is not an open one; treating it as timeless would make it
+    overlap everything and publish a correction as a live contradiction, which
+    is the failure that tool exists to prevent. `non_overlapping` and the
+    deprecated `superseded` alias are unchanged, and the `note` now says the
+    disjointness check runs on instants, so an offset is honoured.
+
+  A note on `xsd:string`: RDF 1.1 makes a simple literal and an
+  `xsd:string`-typed literal with the same lexical form the SAME term
+  (`datatype()` answers `xsd:string` for both), so a bound cannot be rejected
+  for carrying that datatype: the store holds no such fact to report. Untyped
+  bounds are read by shape against the four grammars, which rejects
+  `"01/05/2026"` either way while leaving every store written with plain
+  literals answering as before. A value wearing one of the four datatypes but
+  matching another of them (the shape this crate's own module doc shipped for
+  `recordedAt`) is read as what it is. 8 grammar tests in `src/temporal.rs`, and
+  the conformance corpus in `tests/temporal_conformance_test.rs` goes from 24
+  tests to 34: the four cases pinned for this change, and the offset pair the
+  `non_overlapping` fix pinned, flip on the lines that held the old answer, and
+  a third section covers what parsing adds.
+
+### Added
+- **`temporal:supersedes` and `temporal:retracts`: lineage that is asserted,
+  never inferred** (#109). Three situations looked identical in the data: a
+  correction (one authority replacing its own assertion), a disagreement (two
+  sources) and a retraction (withdrawn, nothing put in its place).
+  `onto_temporal_conflicts` filed a correction that shares its predecessor's
+  valid period as a contradiction, and with no explicit `recordedUntil` the
+  predecessor stayed believed for ever. Both predicates are written on the
+  NEWER graph and name the graph it replaces or withdraws. `recordedUntil`
+  alone governs scope and an explicit bound is authoritative; where a graph
+  carries none, its closing bound is derived from the inbound link as the
+  successor's `recordedAt`, the earliest where there are several, since belief
+  ended at the first replacement and a later one does not revive it. Where
+  both are present and disagree the explicit value governs and the
+  disagreement is reported, not reconciled. Nothing is written: the derivation
+  is a join made when the validity map is read, inside `validities()`, so the
+  snapshot, the query and the conflict check share it by construction.
+
+  `onto_temporal_snapshot` and `onto_temporal_query` gain two keys, present
+  only when non-empty like `invalid`. `retracted` holds rows shaped like
+  `excluded`, with `reason: "retracted"`, `retracted_by` and `retracted_at`,
+  for graphs a `retracts` link recorded by `as_of` has withdrawn; a retracted
+  graph leaves `in_scope`, its triples are not read, and retraction is checked
+  before the bounds, so for a readable graph it beats every other reason,
+  a derived closing bound included; an unreadable graph stays in `invalid`,
+  whatever links name it. `lineage` holds one `{graph, reason, ...}` row per
+  thing the links could not settle: an explicit bound that disagrees with its
+  successor, a transaction interval that closes before it opens (a successor
+  recorded before its predecessor, reported as inverted and believed at no
+  instant, never clamped), a successor with no `recordedAt`, more than one
+  successor (reported whether the close was derived or asserted, in one row
+  shape: `closed_by` names the successor where the bound was derived, and
+  `recorded_until` the explicit bound where it was asserted, since no
+  successor closed a graph that closed itself), a retractor with no
+  `recordedAt` (which withdraws at every `as_of` given: a withdrawal at an
+  unknown time is still a withdrawal), a cycle, a link naming the graph
+  itself, an undescribed or unreadable graph, or a term that is not an IRI,
+  and a link asserted by a graph whose own description could not be read,
+  which closes and withdraws nothing and says so rather than vanishing with
+  its asserter. A link the pass rejects is pruned from the map it hands on,
+  so every consumer walks effective links only: a `supersedes` naming an
+  undescribed graph puts no pair in `corrections`, and the disjoint pair it
+  fails to link is the contradiction it is, the undescribed graph being
+  timeless. An excluded row whose closing bound was derived carries
+  `superseded_by`. With no `as_of` a derived bound is read as an asserted one
+  is: no instant was asked about on the recorded axis, so the graph is in
+  scope. With no `as_of` the recorded axis is not consulted for retraction
+  either: a retracted graph takes the ordinary path, in scope unless its
+  valid-time bounds exclude it, exactly like a graph closed by a
+  `recordedUntil`, explicit or derived. One rule for every recorded-time
+  fact. The alternative, an absent `as_of` read as "now" for the whole
+  recorded axis, is a one-line reversal that would then have to change
+  explicit `recordedUntil` too. `onto_temporal_conflicts` gains `corrections`
+  / `corrections_count`, present only when non-empty like `undecided`: pairs
+  where one graph supersedes the other, directly or through a chain, checked
+  before the overlap test, so such a pair is never a contradiction whatever
+  its periods, and the `note` says so. Retracted graphs are not treated
+  specially there. `temporal:authority` is description, not a key, and is
+  left for a follow-up.
+
+  Cap arithmetic: the validity scan counts rows over a six-way UNION now. A
+  store that writes neither predicate is unchanged. A graph carrying the four
+  bounds and one link costs five rows, both links six, so the 20,000-row cap
+  covers roughly 4,000 such graphs, or roughly 3,300 with both, against
+  roughly 5,000 fully bounded ones; a test proves the fifth row. The
+  `validities` truncation texts, on the snapshot, the query and the conflict
+  check, name the failure the shared cap adds: a `supersedes` or `retracts`
+  row cut while its asserter's bounds survived was never seen, so the graph
+  it named stays open or in scope although it is described, and a pair the
+  link would have made a correction is compared on its periods.
+  `semantics_version` stays `temporal/2`: the lineage predicates ship in the
+  same release as the parsed bounds, and a store without them answers as it
+  did.
+- **CLI: Daemon mode — persistent in-memory store across processes.** New `daemon start / stop / status` subcommand launches `serve-http` as a detached background process and writes its PID + URL to `~/.open-ontologies/daemon.json`. All 24 CLI commands that touch the `Arc<GraphStore>` (load, save, clear, stats, query, lint, reason, shacl, enforce, plan, apply, version, history, rollback, pull, push, ingest, drift, lock, monitor, monitor-clear, marketplace, and `batch`) automatically detect a live daemon and route their request to it via the new `/api/batch` HTTP endpoint — no flags, no code changes per-command. Use `--no-connect` to force local execution. Daemon liveness is checked with a bare `kill(pid, 0)` (Unix) / `tasklist` (Windows), rather than forking `/bin/kill` on the path the daemon exists to make fast; stale `daemon.json` files are removed automatically on the next command. New modules `src/daemon.rs` (PID file management + process control) and `src/connect.rs` (HTTP proxy client), and `libc` as a dependency for the liveness check.
+
+  Commands are proxied in the structured form of `/api/batch` — `{"command": name, "args": [..]}`, one argument per array element — rather than as a command line the daemon re-tokenizes. The lossy round trip was the source of most of what is fixed below: an argument cannot be torn on a newline, mangled by a quoting rule, or resolved against the wrong directory once it is an array element that reaches the daemon exactly as clap parsed it. Path arguments are made absolute before they are sent, and an invocation carrying a flag the batch handler has no arm for is run locally rather than proxied without it. `daemon start` waits for the port to accept a connection instead of sleeping a fixed 600ms, so it neither burns the wait when the bind is fast nor reports success for a child that never bound.
+- **CLI: `marketplace` command works via daemon.** `marketplace list [--domain <d>]` and `marketplace install --id <id>` are now proxy-able through the daemon's `/api/batch` endpoint. Installing an ontology from the marketplace with a daemon running loads it into the daemon's persistent store so subsequent `stats`, `query`, and `reason` calls in any other process see the installed triples. Implemented via a new `exec_marketplace` async handler in `BatchRunner`.
+- **CLI: Human-readable output behind `--human`.** Passing `--human` renders results as text rather than JSON (e.g. `stats` prints a plain key/value block; `load` prints "Loaded N triples from path"; errors print "Error: message"). JSON remains what every command prints when no format is asked for, so existing scripts and any consumer reading the CLI's stdout are unaffected; `--json` is accepted as an explicit statement of that default, and `--pretty` still gives indented JSON. The branch originally made text the default and JSON opt-in, which `tests/cli_load_ephemeral_test.rs` catches: it runs `load` with no flags and parses stdout, so the flip would have broken every unflagged caller silently, a prose response being detectable as wrong only at the consumer. A `OnceLock<bool>` global (`JSON_MODE`) is resolved once at startup and read through `json_mode()`, which defaults to JSON on any path that runs before startup has set it; `output_json`, `output_result` and both daemon-proxy call sites consult it, so local and proxied commands cannot disagree about the format. Daemon proxy output now matches local output exactly: the `seq`/`command` batch envelope is stripped and only the `result` value is rendered. Human-readable rendering lives in the new `src/output.rs` module (`render_human`), which handles stats tables, SPARQL result tables, marketplace lists, load/save/install confirmation lines, lint/enforce issue lists, version history, SPARQL bindings, and a pretty-JSON fallback for unknown shapes.
+- **Studio: Multilingual label filter in Tree view.** `TreeView` gains a language chip bar in its header, listing every BCP-47 tag present in the loaded ontology's `rdfs:label` values and shown only when more than one exists. Labels are loaded with full language-tag preservation (two-pass: collect all variants into a `labelMapRef`, then `pickLabel` to build nodes). Switching language relabels the existing React tree state in-place (`relabelTree` walk) — no SPARQL re-query. `nodeMapRef` is also updated so breadcrumbs and connection chips reflect the selected locale. Fallback chain: preferred language → `en` → untagged literal → first available → URI local name.
+- **Studio: Language badges and filter in Property Inspector.** `PropertyInspector` now parses language tags from both engine-native (`"value"@lang`) and standard SPARQL JSON (`xml:lang`) response formats. Each literal row that carries a language tag displays a small monospace badge (e.g. `en`, `cs`) to the right of the value. A language chip bar above the property list (shown only when ≥1 language tag is detected) lets users filter rows to a single locale; URI values are always shown regardless of the filter. `saveEdit` and `deleteProp` include the original language tag in the SPARQL `DELETE`/`INSERT` pattern so editing one locale does not affect sibling translations. The **+ Add** form gains an optional language tag input with quick-pick chips for languages already present on the node.
+- **Optional eviction of float32 text vectors from memory**
+  (`VecStore::with_text_vectors_evicted`, `turbovec` feature). Without it the
+  TurboQuant backend's compression is a smaller SQLite blob rather than less
+  RAM, because the 4 bit codes and the float32 vectors they were made from are
+  both resident. In eviction mode the float32 lives only in the `embeddings`
+  table: upserts write through to the row before touching memory, removals
+  delete it, and reads load on demand. Three new accessors carry every path
+  that used to reach into the entry map directly: `fetch_text_vecs` pulls just
+  the shortlist for the exact re-score (the hot path, one query rather than one
+  round trip per candidate), `all_text_vecs` streams the whole set IRI-sorted
+  for the paths that genuinely need every vector, and the public
+  `load_text_vec` returns one owned vector in either mode. New
+  `resident_text_vector_bytes()` reports what is still held.
+
+  `entries_fingerprint` is now public and reads through `all_text_vecs`, so an
+  evicted store and a resident one over the same database hash the same stream
+  and can share persisted index caches; a test asserts that equality.
+  `get_text_vec` still returns a borrowed slice and therefore returns `None`
+  under eviction, which is why `align.rs` and `onto_compare` were moved to
+  `load_text_vec`: left alone they would have silently scored every pair at
+  0.0. Eviction is only coherent with the TurboQuant backend, since an
+  `instant-distance` graph holds its own float32 copy of every point. 8 tests
+  in `tests/vecstore_eviction_test.rs`, each asserting an evicted store returns
+  exactly what a resident one built from identical data returns, plus an
+  `#[ignore]`d measurement of what the mode costs per query.
+
+  Measured at 20,000 vectors x 384 dims on an M3 Max: 30.7 MB of resident
+  float32 goes to zero, `search_cosine_turbo` costs about 75 us more per query
+  (312 us to 387 us) for the shortlist fetch, and the exact `search_cosine`
+  scan costs 2.4x more (16.4 ms to 39.4 ms) because it reads every row. Evict
+  when the workload queries through the turbo path; do not evict when it leans
+  on the exact scan.
+
+### Fixed
+- **Studio: Tree connector lines — L vs T shape for last children.** The ancestor-continuation-line loop ran `for lvl = 0; lvl < indent`, but `lvl = indent-1` is the same pixel column as the node's own connector (`(indent-1) × INDENT_W + 16`). When the direct parent was not the last child in its group, this drew a full-height vertical at that column, overriding the correct L-shape with a T even for nodes where `isLastChild = true`. Fixed by stopping the ancestor loop at `lvl < indent - 1`; the own connector exclusively owns its column and correctly renders L or T based on `isLastChild`.
+- **`search_cosine` and `search_product` no longer clone the entire corpus per
+  query.** Routing them through the new whole-set accessor initially copied
+  every float32 vector on every call, which cost 20 ms per query at 20,000 x
+  384 and made a resident store measurably slower than an evicted one. The
+  accessor now yields `Cow` and borrows when the vectors are resident: the
+  exact scan went from 36.6 ms to 16.4 ms. Caught by the eviction measurement,
+  not by the tests, which only assert results.
+- **TurboQuant cosine index backend** (new optional `turbovec` feature, off by
+  default, implies `embeddings`). A second index backend for the text half of
+  the vector store, built on Google Research's TurboQuant quantiser
+  (arXiv:2504.19874) via the `turbovec` crate, alongside the existing
+  `instant-distance` HNSW graph. New `src/turbo_index.rs` with
+  `TurboCosineIndex` (`build`, `upsert`, `remove`, `search`, `search_within`,
+  `to_bytes`, `from_bytes`), and three new `VecStore` entry points
+  (`search_cosine_turbo`, `persist_turbo_index`, `load_turbo_index`) plus the
+  `turbo_index_len` accessor.
+
+  The motivation is mutation cost, not compression. An `instant-distance`
+  graph is immutable, so every `VecStore::upsert` sets `cosine_index = None`
+  and the next search pays a full rebuild; an ontology whose embeddings arrive
+  incrementally pays that rebuild once per class. TurboQuant has no training
+  phase and no graph, so an insert is an append and a removal is O(1), and
+  `upsert`/`remove` now maintain the live index rather than dropping it.
+
+  The quantised index is a candidate generator, never the answer.
+  `search_cosine_turbo` pulls a shortlist four times wider than the request
+  (floor of `top_k + 32`), re-scores every candidate against the float32
+  vector the store already holds, and returns that, so no approximate
+  similarity number reaches a caller and the result is identical to the exact
+  brute-force scan whenever the shortlist covers the true top-k. That identity
+  is asserted directly against `search_cosine` in the tests rather than
+  assumed.
+
+  Scope limits, both deliberate. (1) `PoincareIndex` is untouched and stays on
+  `instant-distance`: TurboQuant scores inner products, and hyperbolic
+  distance is not an inner product on the ambient coordinates. (2) The store
+  still holds float32 vectors in memory, because the exact re-score and
+  `search_cosine` need them, so this change does not yet realise TurboQuant's
+  memory win. Evicting float32 to SQLite with load-on-demand for the re-score
+  is the follow-on.
+
+  Implementation notes: vectors are zero-padded to the next multiple of 8
+  (`turbovec` requires `dim % 8 == 0`; zero padding leaves every inner product
+  unchanged). IRIs map to `u64` ids that are never recycled, so a stale
+  allowlist entry naming a removed id fails loudly rather than resolving to
+  whatever vector took its place; the id counter is serialised with the index
+  so a reload cannot restart allocation at 0. A query is validated before it
+  reaches the kernel: `turbovec`'s allowlist-free `search` is the panicking
+  form, so a non-finite coordinate from a misbehaving embedding provider, or a
+  query whose dimensionality disagrees with the index, is reported as no
+  results rather than panicking the server or being silently truncated into a
+  plausible-looking ranking against the wrong vector. Persistence reuses the existing
+  `hnsw_index_cache` table under `kind = 'turbo_cosine'` with no schema
+  change, and both load guards are unchanged: `model_fp` rejects an index
+  built under a different embedding configuration, `entries_hash` rejects one
+  whose entry set has moved on. 17 new tests in `tests/turbovec_index_test.rs`
+  covering top-1 agreement with the exact scan, incremental add/replace/remove,
+  byte round-trip, id allocation after a reload, allowlist search (including
+  unknown and empty allowlists), sub-8 dimensionality padding, non-finite and
+  wrong-width query rejection, the VecStore score-identity guarantee, index
+  warmth across mutations, SQLite round-trip and stale-cache rejection, plus an
+  `#[ignore]`d measurement against HNSW.
+
+  Measured at 10,000 vectors x 768 dims on an M3 Max (`docs/embeddings.md` has
+  the tables): build 116 s vs 178 ms, one added embedding 137 s vs 52 us, query
+  4.7 ms vs 0.25 ms, serialised index 34.1 MB vs 5.2 MB against 30.7 MB of raw
+  float32.
+
+  The recall picture is worth stating carefully, because the first measurement
+  overstated it. On that synthetic corpus recall@10 is 91.6% for HNSW and 100%
+  for the re-scored TurboQuant shortlist, and the control shows the gap is
+  structural rather than a matter of shortlist width: giving HNSW 40 candidates
+  instead of 10 leaves it at exactly 91.6%, because the entries it misses are
+  ones the graph walk never reaches. But isotropic random vectors are close to
+  the worst case for a graph index, and on a real corpus the gap all but
+  vanishes. `measure_recall_on_a_real_corpus` embeds 10,000 real ontology
+  labels with the shipped local MiniLM model over two contrasting real corpora,
+  a topical taxonomy (mean pairwise cosine 0.25) and a set of real-world entity
+  names (0.34), against ~0 for the synthetic corpus. HNSW scores 99.9% and
+  99.8% there, against 100% for TurboQuant. So recall is not a reason to switch backends; mutation cost and
+  index size are.
+- **Four extension surfaces** (ECOSYSTEM.md maps them). (1) **Community
+  marketplace packs**: `onto_marketplace` now merges an open runtime-fetched
+  registry (`community/registry.json`, override with
+  `OPEN_ONTOLOGIES_COMMUNITY_REGISTRY`, `community=false` to skip) with the
+  curated catalogue — entries are tagged `"source": "curated"|"community"`,
+  curated IDs always shadow community IDs, and the shipped registry is
+  validated in CI. Seeded with the Manchester/Stanford Pizza teaching
+  ontology. (2) **Community skills**: `skills/community/` with a template —
+  zero-code markdown workflow recipes. (3) **Companion servers**: the
+  five-rule contract (`docs/companion-servers.md`) naming the compose-over-MCP
+  pattern OpenCheir already uses (no embedded LLM, no `onto_*` squatting,
+  packs/files as interchange, lineage webhook, graceful degradation).
+  (4) **WASM plugins** (`--features plugins`): sandboxed community tools via
+  the pure-Rust wasmi interpreter — `onto_plugin_list` / `onto_plugin_call`,
+  ABI v1 (no host imports, no IO, fuel-metered, fresh instance per call,
+  16 MB return cap), graph access only by caller-passed `sparql` whose rows
+  are injected as `bindings`. Reference plugin in
+  `examples/plugins/label-case-lint`; ABI exercised by WAT-built plugins in
+  `tests/plugin_host_test.rs` (including fuel-exhaustion and oversized-return
+  guards). Docs: `docs/plugins.md`.
+- **fenic support.** [fenic](https://github.com/typedef-ai/fenic) (typedef-ai's
+  semantic DataFrame framework) keeps its local catalog in a plain DuckDB file
+  with user tables under the `typedef_default` schema. The DuckDB schema
+  introspector now scans all user schemas instead of only `main` (excluding
+  `information_schema`, `pg_catalog`, `__`-prefixed internals, and fenic's
+  `fenic_system` telemetry schema), so `import-schema` / `onto_import_schema`
+  work directly against fenic catalogs; cross-schema table-name collisions are
+  disambiguated as `<schema>_<table>`. `open-ontologies-lite` gains a
+  duck-typed dataframe bridge — `rows_from_dataframe`, `rows_to_turtle`, and
+  `OntologyEngine.load_rows` accept fenic, polars, pandas, and pyarrow objects
+  with no new dependencies. New end-to-end example
+  `python/examples/fenic_pipeline.py` and a "fenic" section in
+  `docs/data-pipeline.md`.
+
 ## [1.2.0] - 2026-08-15
 
 ### Added

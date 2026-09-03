@@ -1,0 +1,150 @@
+# Discovery-surface probes, 2 September 2026
+
+All observations below were made live on 2 September 2026 with `curl -sL`
+(redirects followed) from a UK-account residential connection. They are
+point-in-time observations of deployed web infrastructure and can change at any
+time. Each numbered line is an evidence anchor for a claim in Section 7 of the
+paper.
+
+## NCAP (United Kingdom): catalogue host airphotofinder.ncap.org
+
+1. `https://ncap.org.uk` → HTTP/2 301, `location: https://www.ncap.org/`.
+2. `https://www.ncap.org/robots.txt` → valid robots file. Declares
+   `sitemap: https://www.ncap.org/sitemaps-1-sitemap.xml`. Disallows
+   `/cpresources/`, `/vendor/`, `/.env`, `/cache/` for all agents, and fully
+   disallows GPTBot, Google-Extended and PerplexityBot.
+3. `https://www.ncap.org/sitemaps-1-sitemap.xml` → valid sitemap index; entries
+   observed cover editorial sections (`caseStudies`, `guides`, `news`, ...).
+   No image sitemap entries observed in the index head.
+4. `https://airphotofinder.ncap.org/robots.txt` → 200 `text/html`: the Angular
+   application shell, not a robots file.
+5. `https://airphotofinder.ncap.org/sitemap.xml` → 200 `text/html`: the same
+   application shell.
+6. `https://airphotofinder.ncap.org/image/797810` → 200 `text/html`,
+   50,661 bytes, `<title>NCAP Geoportal</title>`. The string `797810` occurs
+   zero times in the delivered HTML.
+
+## NAPL open data (Canada): catalogue host open.canada.ca
+
+7. `https://open.canada.ca/robots.txt` → valid robots file (73 Disallow rules;
+   none matching `/data/` or `dataset`).
+8. `https://open.canada.ca/sitemap.xml` → 200 `application/xml`.
+9. `https://open.canada.ca/data/en/dataset/114417c3-41a4-4cf7-8acd-2eb9d16c97f3`
+   → 200, 42,069 bytes of server-rendered HTML. Title: "Collection of Temporal
+   Series of the National Air Photo Library (NAPL) - Open Government Portal".
+   The phrase "National Air Photo" occurs 9 times in the delivered HTML;
+   `schema.org` is referenced; no `noindex` directive present.
+
+## WHAIFinder (United States): catalogue host maps.sco.wisc.edu
+
+10. `https://maps.sco.wisc.edu/robots.txt` → valid robots file, verbatim:
+    `User-agent: *` / `Disallow: /`, then `Browsershots` (no disallow),
+    `Googlebot` / `Allow: /`, `Mediapartners-Google` / `Allow: /`,
+    `Googlebot-Mobile` / `Allow: /`.
+11. `https://maps.sco.wisc.edu/sitemap.xml` → 404.
+12. `https://maps.sco.wisc.edu/whaifinder/` → 200, 1,315 bytes: a JavaScript
+    application shell with 2 script tags, no schema.org markup, and no record
+    content in the delivered HTML.
+
+## Deployed consumer of machine-readable licensing metadata
+
+13. `https://developers.google.com/search/docs/appearance/structured-data/image-license-metadata`
+    → 200, "Google Images SEO: Image Metadata", Google Search Central
+    documentation, accessed 2 September 2026. States: providing licensing
+    information makes an image eligible for the Licensable badge, "which
+    provides a link to the license and more detail on how someone can use the
+    image"; the information is supplied either as schema.org `ImageObject`
+    structured data (`license`, `acquireLicensePage`) or as IPTC photo metadata
+    (Web Statement of Rights, Licensor URL), either being sufficient; Google
+    recommends submitting a sitemap to keep results current.
+14. `https://schema.org/acquireLicensePage` → 200.
+
+## Additional probes, same day (2 September 2026)
+
+15. WHAIFinder FeatureServer live counts
+    (`.../Wisconsin_Historic_Aerial_Imagery/FeatureServer/0/query`):
+    total records 318,295; records with `map_scale_denom>0`: 106,597. Grouping
+    the scale-null records by `collection_identifier` returns modern digital
+    orthoimagery series (for example "Barron County 2024" 6,400, "Bayfield
+    County 2025" 6,392, "Marathon County 2025" 6,336, `doq_qq` 5,184), not
+    historic film.
+16. `https://docs.ogc.org/cs/25-004/25-004.html` → title "SpatioTemporal Asset
+    Catalog (STAC) Community Standard", Version: 1.1, dates 2025-09-09
+    (approval) and 2025-10-14 (publication). STAC 1.0.0 release date
+    2021-05-25 per the stac-spec releases.
+17. RiC-O 1.1 source (`RiC-O_1-1.rdf`, ICA-EGAD master, parsed with rdflib):
+    107 owl:Class declarations in the rico namespace;
+    `rico:isOrWasIncludedIn` domain = union(Record, RecordSet), range =
+    RecordSet; `rico:isOrWasComponentOf` domain = Instantiation, range =
+    Instantiation; `rico:IntellectualPropertyRightsRelation` and
+    `rico:LegalStatus` are owl:Classes; the only class name containing
+    "Right" is IntellectualPropertyRightsRelation.
+18. NCAP sample revalidation after the interim-rights disclosure edit
+    (pyshacl, advanced mode): with the adapter's interim rights statement
+    attached, conforms; with all `naph:hasRightsStatement` triples removed,
+    292 violations, every one on the rights constraint, none elsewhere.
+19. Commerce profile negative controls re-run inside the public repository
+    (`extensions/commerce/controls/run_controls.py`): licensable-no-offer
+    fails, offer-no-route fails, offer-with-route passes; rebuild from
+    `data/real-ncap-sample.ttl` reproduces records 292, per-item routes 292,
+    fallbacks 0, triples 11,382, STAC items 292, and the built graph conforms
+    to the commerce shapes.
+20. STAC schema validation (2 September 2026, stac-validator over the
+    repository's reports/stac/): catalog.json valid against the official
+    STAC 1.0.0 catalog schema; all 292 items valid against the STAC 1.0.0
+    item schema (292/292).
+21. Interim Baseline rights statement changed from rightsstatements.org
+    In Copyright to Copyright Not Evaluated (CNE/1.0, resolves 200), because
+    the sample includes 55 records held for the United States National
+    Archives whose copyright status only the institution can determine.
+22. RiC-O 1.1: rico:Rule is an owl:Class and rico:Mandate rdfs:subClassOf
+    rico:Rule (verified in RiC-O_1-1.rdf); Rule carries no URI-valued
+    reuse-terms property.
+23. CRMgeo citation verified via CrossRef (10.1007/s00799-016-0192-4):
+    Hiebel, Doerr, Eide, IJDL 18(4):271-279, 2017. cidoc-crm.org resolves.
+    WKT axis order verified longitude-first in data/real-ncap-sample.ttl
+    (Hong Kong sample: 114.14, 22.36).
+24. GeoSPARQL execution demonstrated (2 September 2026): Apache Jena
+    jena-fuseki-geosparql 5.1.0 (Maven Central jar, OpenJDK 26), loaded with
+    naph-core.ttl + the three validated samples (11,140 merged triples;
+    18,885 after the server's inference), spatial index built. Query:
+    photos whose footprint geof:sfIntersects
+    POLYGON((113.8 22.1, 114.5 22.1, 114.5 22.6, 113.8 22.6, 113.8 22.1))
+    with YEAR(capturedOn) in [1920, 1930], selecting photo, date, sortie.
+    Result: 75 frames, 4 sorties (PEGASUS-RN-H-0007/0008/0009/0012), dates
+    1924-11-12 to 1924-11-13. Timings over three runs: 42 ms cold, 12 ms
+    warm (curl time_total against localhost:3030/ds/sparql).
+25. STAC export corrected to honour declared date precision (2 Sep 2026):
+    year- and month-precision frames now serialise with datetime null plus
+    start_datetime/end_datetime interval bounds. Regenerated: 292 items, 0
+    skipped, 67 interval items; catalog and all 292 items valid against the
+    official STAC 1.0.0 schemas (stac-validator).
+26. NAPL both-ways sortie validation (pyshacl): with the synthesised sortie
+    aggregate, 40 records conform; with all partOfSortie triples removed,
+    exactly 40 violations, every one on the sortie constraint.
+27. WHAIFinder footprint construction verified in code: metres-to-degrees in
+    a local equirectangular frame, longitude step divided by cos(latitude)
+    (whaifinder_arcgis.py reconstruct_footprint).
+28. Competency-question execution (2 Sep 2026, Fuseki GeoSPARQL over the
+    merged 557-record graph; full prefix header prepended, since queries
+    CQ2-CQ8 in the shipped document omit prefixes declared in CQ1):
+    CQ1=2 rows (date-typed filter; year-precision records excluded by type),
+    CQ2=0 (no Edinburgh frames in sample), CQ3=222, CQ4=0, CQ5=0,
+    CQ6=557 at Baseline, CQ7=0, CQ8=0. Core-STAC evaluation over the
+    292-item UK export using core fields only: CQ1=67 (all via the interval
+    serialisation), CQ2=0 (bbox), CQ3 indeterminate (license "other" on
+    292/292); CQ4-CQ8 not expressible in core STAC.
+29. Reasoner check on naph-core: Pellet (owlready2) consistent, zero
+    unsatisfiable classes. HermiT refuses the ontology: xsd:date and
+    xsd:gYear are outside the OWL 2 DL datatype map
+    (UnsupportedDatatypeException).
+30. Generalisation survey basis: fifteen candidate collections in twelve
+    jurisdictions probed live 2 Sep 2026 by two independent runs (a
+    15-agent fleet and a separate curl-based session) agreeing on
+    feasibility for every collection both assessed; eleven with open
+    machine endpoints across at least eight further architectures. Raw
+    assessments: v2-collection-scout-claude.json, v2-collection-scout.json,
+    v2-scout-merged-verdict.md (published in the repository under
+    docs/survey-2026-09-02/). Headline live-probed counts: France IGN WFS
+    4,907,805 photo records / 26,078 missions; Historic England APEx
+    468,176; LINZ 701,840.

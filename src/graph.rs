@@ -2,10 +2,19 @@ use std::io::Cursor;
 use std::path::Path;
 use std::sync::Mutex;
 
-use oxigraph::io::{RdfFormat, RdfParser, RdfSerializer};
+use oxigraph::io::{JsonLdProfileSet, RdfFormat, RdfParser, RdfSerializer};
 use oxigraph::model::*;
 use oxigraph::sparql::{QueryResults, SparqlEvaluator};
 use oxigraph::store::Store;
+
+/// What a parse produced. `statements` counts parser events; `triples` counts
+/// distinct triples, which is the size of the resulting graph. They differ
+/// whenever the source repeats a statement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ValidationCounts {
+    pub statements: usize,
+    pub triples: usize,
+}
 
 /// Optional HTTP authentication for remote SPARQL endpoints.
 ///
@@ -110,10 +119,14 @@ impl GraphStore {
         let quads: Vec<_> = parser
             .for_reader(reader)
             .collect::<Result<_, _>>()?;
+        // Report triples actually added, not parse events. The store is a set, so
+        // re-inserting a statement it already holds changes nothing and must not be
+        // counted as a load.
+        let before = store.len().unwrap_or(0);
         for quad in &quads {
             store.insert(quad)?;
         }
-        Ok(quads.len())
+        Ok(store.len().unwrap_or(before).saturating_sub(before))
     }
 
     /// Load RDF content in a specified format (Turtle, RDF/XML, etc.)
@@ -133,10 +146,14 @@ impl GraphStore {
         let quads: Vec<_> = parser
             .for_reader(reader)
             .collect::<Result<_, _>>()?;
+        // Report triples actually added, not parse events. The store is a set, so
+        // re-inserting a statement it already holds changes nothing and must not be
+        // counted as a load.
+        let before = store.len().unwrap_or(0);
         for quad in &quads {
             store.insert(quad)?;
         }
-        Ok(quads.len())
+        Ok(store.len().unwrap_or(before).saturating_sub(before))
     }
 
     pub fn load_file(&self, path: &str) -> anyhow::Result<usize> {
@@ -160,10 +177,14 @@ impl GraphStore {
         let quads: Vec<_> = parser
             .for_reader(reader)
             .collect::<Result<_, _>>()?;
+        // Report triples actually added, not parse events. The store is a set, so
+        // re-inserting a statement it already holds changes nothing and must not be
+        // counted as a load.
+        let before = store.len().unwrap_or(0);
         for quad in &quads {
             store.insert(quad)?;
         }
-        Ok(quads.len())
+        Ok(store.len().unwrap_or(before).saturating_sub(before))
     }
 
     pub fn save_file(&self, path: &str, format: &str) -> anyhow::Result<()> {
@@ -172,37 +193,129 @@ impl GraphStore {
         Ok(())
     }
 
-    pub fn validate_turtle(ttl: &str) -> anyhow::Result<usize> {
+    pub fn validate_turtle(ttl: &str) -> anyhow::Result<ValidationCounts> {
         let reader = Cursor::new(ttl.as_bytes());
         let parser = RdfParser::from_format(RdfFormat::Turtle).for_reader(reader);
-        let mut count = 0;
-        for quad in parser {
-            quad?;
-            count += 1;
-        }
-        Ok(count)
+        Self::count_parsed(parser)
     }
 
-    pub fn validate_file(path: &str) -> anyhow::Result<usize> {
+    /// Read a file and hand back Turtle, whatever it was serialised as.
+    ///
+    /// `validate` has always sniffed the format; `lint` read the bytes and
+    /// handed them to a Turtle parser, so it failed on every RDF/XML document
+    /// with a parse error from the wrong parser. Since OBO Foundry publishes
+    /// RDF/XML, that made `lint` unusable on 62 of the 64 real ontologies in a
+    /// census of the most-declared vocabularies in the public metabolomics
+    /// record. Both commands now share this.
+    pub fn read_as_turtle(path: &str) -> anyhow::Result<String> {
+        let content = std::fs::read_to_string(path)?;
+        Self::content_as_turtle(path, content)
+    }
+
+    /// As `read_as_turtle`, for content already in hand (stdin, for instance).
+    pub fn content_as_turtle(path_hint: &str, content: String) -> anyhow::Result<String> {
+        let format = Self::detect_format_sniffed(path_hint, &content);
+        if format == RdfFormat::Turtle {
+            return Ok(content);
+        }
+        let store = Self::new();
+        {
+            let inner = store.store.lock().unwrap();
+            let base = std::fs::canonicalize(path_hint)
+                .ok()
+                .and_then(|abs| abs.to_str().map(|s| format!("file://{s}")));
+            let mut parser = RdfParser::from_format(format);
+            if let Some(p) = base.as_ref().and_then(|b| parser.clone().with_base_iri(b).ok()) {
+                parser = p;
+            }
+            let quads: Vec<_> = parser
+                .for_reader(Cursor::new(content.as_bytes()))
+                .collect::<Result<_, _>>()?;
+            for quad in &quads {
+                inner.insert(quad)?;
+            }
+        }
+        store.serialize("turtle")
+    }
+
+    pub fn validate_file(path: &str) -> anyhow::Result<ValidationCounts> {
         let content = std::fs::read_to_string(path)?;
         let format = Self::detect_format_sniffed(path, &content);
         let reader = Cursor::new(content.as_bytes());
         let parser = RdfParser::from_format(format).for_reader(reader);
-        let mut count = 0;
-        for quad in parser {
-            quad?;
-            count += 1;
-        }
-        Ok(count)
+        Self::count_parsed(parser)
     }
 
+    /// Count what a parser produced, distinguishing statements from triples.
+    ///
+    /// An RDF graph is a set, so a statement repeated in the source contributes
+    /// one triple and not two. Reporting the parse-event count as a triple count
+    /// overstates any generated document that repeats a statement, which real
+    /// serialisers do constantly: emitting `?lib a :Library` once per record is
+    /// ordinary practice and inflated one 16.7 MB file by 6.7 per cent.
+    fn count_parsed<I>(parser: I) -> anyhow::Result<ValidationCounts>
+    where
+        I: IntoIterator<Item = Result<Quad, oxigraph::io::RdfParseError>>,
+    {
+        let mut statements = 0usize;
+        let mut seen = std::collections::HashSet::new();
+        for quad in parser {
+            let quad = quad?;
+            statements += 1;
+            seen.insert(quad);
+        }
+        Ok(ValidationCounts {
+            statements,
+            triples: seen.len(),
+        })
+    }
+
+    /// Run a SELECT over the store's default graph.
+    ///
+    /// **Which of the two you want depends on who wrote the query.** A query
+    /// someone typed belongs here: they chose the dataset by writing `GRAPH`
+    /// or not writing it, and widening it under them would change the meaning
+    /// of what they wrote. A query this codebase authored to ask a question
+    /// about the store belongs in [`Self::sparql_select_union`], because the
+    /// answer to "what does this store declare" or "which instances are
+    /// there" must not depend on the file format the triples arrived in.
+    ///
+    /// Getting that backwards does not look like a bug. It looks like a clean
+    /// report over a store that holds nothing, which is how it survived in
+    /// four separate tools at once (#108). `tests/serialisation_invariance_test.rs`
+    /// is where a tool's answer is pinned against both serialisations.
     pub fn sparql_select(&self, query: &str) -> anyhow::Result<String> {
+        self.select_with_dataset(query, false)
+    }
+
+    /// Run a SELECT whose default graph is the union of every graph in the
+    /// store, named graphs included.
+    ///
+    /// The plain `sparql_select` leaves the evaluator on its default dataset
+    /// specification, which is the store's default graph alone. That is the
+    /// right dataset for a query someone wrote, since a caller who wants a
+    /// named graph writes `GRAPH`. It is the wrong one for a tool that asks a
+    /// question about the store rather than about a graph, because the answer
+    /// then depends on which serialisation the data arrived in: the same
+    /// triples loaded from Turtle are visible and loaded from TriG are not.
+    ///
+    /// `GRAPH ?g` still ranges over the named graphs here, so a query written
+    /// against the plain form keeps its meaning under this one.
+    pub fn sparql_select_union(&self, query: &str) -> anyhow::Result<String> {
+        self.select_with_dataset(query, true)
+    }
+
+    fn select_with_dataset(
+        &self,
+        query: &str,
+        union_default_graph: bool,
+    ) -> anyhow::Result<String> {
         let store = self.store.lock().unwrap();
-        match SparqlEvaluator::new()
-            .parse_query(query)?
-            .on_store(&store)
-            .execute()?
-        {
+        let mut prepared = SparqlEvaluator::new().parse_query(query)?;
+        if union_default_graph {
+            prepared.dataset_mut().set_default_graph_as_union();
+        }
+        match prepared.on_store(&store).execute()? {
             QueryResults::Solutions(solutions) => {
                 let vars: Vec<String> = solutions
                     .variables()
@@ -296,11 +409,26 @@ impl GraphStore {
     pub fn serialize(&self, format: &str) -> anyhow::Result<String> {
         let store = self.store.lock().unwrap();
         let rdf_format = Self::parse_format(format)?;
+        // Dataset formats carry the graph name; every other format is a single
+        // RDF graph. `serialize_triple` drops the graph name, flattening a quad
+        // from a named graph into the default graph. That is the only thing a
+        // triple format can do, but for the dataset formats it silently
+        // discarded the named-graph structure that temporal assertions live in
+        // (issue #95): a TriG save/reload round trip lost every
+        // `validFrom`/`validTo` binding. `serialize_quad` keeps the graph name,
+        // and for the triple formats we keep flattening. `supports_datasets`
+        // owns the list upstream, so a format added later (JSON-LD is already
+        // in it) is classified correctly rather than silently flattened.
+        let carries_graph_name = rdf_format.supports_datasets();
         let mut buf = Vec::new();
         let mut serializer = RdfSerializer::from_format(rdf_format).for_writer(&mut buf);
         for quad in store.iter() {
             let quad = quad?;
-            serializer.serialize_triple(quad.as_ref())?;
+            if carries_graph_name {
+                serializer.serialize_quad(quad.as_ref())?;
+            } else {
+                serializer.serialize_triple(quad.as_ref())?;
+            }
         }
         // `finish()` writes the final terminator (e.g. the trailing `.` on the
         // last Turtle triple, or `</rdf:RDF>` for RDF/XML). Dropping the
@@ -404,9 +532,23 @@ impl GraphStore {
     }
 
     pub fn load_ntriples(&self, content: &str) -> anyhow::Result<usize> {
+        self.load_lines(content, RdfFormat::NTriples)
+    }
+
+    /// Load N-Quads, keeping every graph name.
+    ///
+    /// The line-based sibling of [`load_ntriples`](Self::load_ntriples), for
+    /// the paths that round-trip a whole dataset rather than one graph — the
+    /// compile cache above all, where N-Triples silently flattened everything
+    /// it was asked to hold.
+    pub fn load_nquads(&self, content: &str) -> anyhow::Result<usize> {
+        self.load_lines(content, RdfFormat::NQuads)
+    }
+
+    fn load_lines(&self, content: &str, format: RdfFormat) -> anyhow::Result<usize> {
         let store = self.store.lock().unwrap();
         let reader = Cursor::new(content.as_bytes());
-        let parser = RdfParser::from_format(RdfFormat::NTriples).for_reader(reader);
+        let parser = RdfParser::from_format(format).for_reader(reader);
         let mut count = 0;
         for quad in parser {
             store.insert(&quad?)?;
@@ -471,7 +613,18 @@ impl GraphStore {
         auth: &SparqlAuth,
     ) -> anyhow::Result<String> {
         let update = match graph {
-            Some(g) => format!("INSERT DATA {{ GRAPH <{g}> {{ {content} }} }}"),
+            Some(g) => {
+                // The graph name is spliced into a SPARQL 1.1 Update sent verbatim to
+                // the remote endpoint, which parses it with no store in between. A
+                // value like `x> {} }; DROP ALL ; INSERT DATA { GRAPH <x` would close
+                // the GRAPH IRI and append arbitrary destructive operations. Validate
+                // it as an absolute IRI first; NamedNode::new rejects '>', whitespace,
+                // braces and quotes, so a value that survives cannot break out.
+                NamedNode::new(g).map_err(|e| {
+                    anyhow::anyhow!("graph is not a valid absolute IRI: {e}")
+                })?;
+                format!("INSERT DATA {{ GRAPH <{g}> {{ {content} }} }}")
+            }
             None => format!("INSERT DATA {{ {content} }}"),
         };
         let client = reqwest::Client::new();
@@ -511,6 +664,10 @@ impl GraphStore {
             RdfFormat::NQuads
         } else if path.ends_with(".trig") {
             RdfFormat::TriG
+        } else if path.ends_with(".jsonld") || path.ends_with(".json") {
+            RdfFormat::JsonLd {
+                profile: JsonLdProfileSet::empty(),
+            }
         } else {
             RdfFormat::Turtle
         }
@@ -548,6 +705,22 @@ impl GraphStore {
             return RdfFormat::Turtle;
         }
 
+        // A JSON body is proof of JSON-LD in a way `{` alone is not: TriG also
+        // opens its default graph block with `{`, and Turtle admits `[` as a
+        // blank-node subject. Requiring a JSON-LD keyword alongside the opening
+        // brace keeps those two out while still rescuing the common case of a
+        // JSON-LD document published under `.owl`, `.rdf` or no extension at
+        // all, which would otherwise reach the Turtle parser and die there.
+        let opens_json = head.starts_with('{') || head.starts_with('[');
+        let has_jsonld_keyword = content.contains("\"@context\"")
+            || content.contains("\"@id\"")
+            || content.contains("\"@graph\"");
+        if opens_json && has_jsonld_keyword {
+            return RdfFormat::JsonLd {
+                profile: JsonLdProfileSet::empty(),
+            };
+        }
+
         ext_format
     }
 
@@ -558,8 +731,14 @@ impl GraphStore {
             "rdfxml" | "rdf" | "xml" | "owl" => Ok(RdfFormat::RdfXml),
             "nquads" | "nq" => Ok(RdfFormat::NQuads),
             "trig" => Ok(RdfFormat::TriG),
+            // "json-ld" is the spelling in the W3C media type registration and
+            // in most other tooling, so rejecting it turns a correct format
+            // name into an error.
+            "jsonld" | "json-ld" | "json" => Ok(RdfFormat::JsonLd {
+                profile: JsonLdProfileSet::empty(),
+            }),
             _ => anyhow::bail!(
-                "Unknown format: {}. Supported: turtle, ntriples, rdfxml, nquads, trig",
+                "Unknown format: {}. Supported: turtle, ntriples, rdfxml, nquads, trig, jsonld",
                 name
             ),
         }

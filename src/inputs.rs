@@ -562,6 +562,20 @@ pub struct OntoMarketplaceInput {
     pub id: Option<String>,
     /// Filter list by domain (e.g. "foundational", "metadata", "iot", "geospatial")
     pub domain: Option<String>,
+    /// Include community packs from the open registry (default true). Set false for the curated catalogue only / offline use.
+    pub community: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct OntoPluginCallInput {
+    /// Plugin name (as reported by onto_plugin_list)
+    pub plugin: String,
+    /// Tool name within the plugin (as reported by onto_plugin_list)
+    pub tool: String,
+    /// JSON input passed to the plugin tool
+    pub input: Option<serde_json::Value>,
+    /// Optional SPARQL SELECT run against the loaded store first; its result bindings are injected into the plugin's input as "bindings". This is the only way a plugin sees graph data — plugins have no direct store access.
+    pub sparql: Option<String>,
 }
 
 // ─── Prompt input structs ───────────────────────────────────────────────────
@@ -1154,7 +1168,9 @@ pub struct OntoReasonIncrementalInput {
 pub struct OntoTemporalSnapshotInput {
     /// Instant to evaluate validity at, e.g. "2026-03-01". Omit for any time.
     pub valid_at: Option<String>,
-    /// Only consider what was recorded by this instant. Omit for everything known.
+    /// Only consider what was BELIEVED at this instant: recorded by then and not
+    /// retired by then. An assertion whose temporal:recordedUntil has passed is
+    /// excluded rather than carried forward. Omit for everything known.
     pub as_of: Option<String>,
 }
 
@@ -1164,6 +1180,7 @@ pub struct OntoTemporalQueryInput {
     pub pattern: String,
     /// Instant to evaluate validity at
     pub valid_at: Option<String>,
-    /// Only consider what was recorded by this instant
+    /// Only consider what was BELIEVED at this instant: recorded by then and not
+    /// retired by then (temporal:recordedUntil closes the interval)
     pub as_of: Option<String>,
 }

@@ -336,6 +336,223 @@ pub fn format_name(fmt: RdfFormat) -> &'static str {
     }
 }
 
+/// Parse a manifest format string back into an RdfFormat.
+pub fn parse_format(s: &str) -> Option<RdfFormat> {
+    match s {
+        "turtle" => Some(RdfFormat::Turtle),
+        "rdfxml" => Some(RdfFormat::RdfXml),
+        "ntriples" => Some(RdfFormat::NTriples),
+        "nquads" => Some(RdfFormat::NQuads),
+        "trig" => Some(RdfFormat::TriG),
+        _ => None,
+    }
+}
+
+// ─── Community packs ─────────────────────────────────────────────────────────
+//
+// The curated CATALOGUE above is compiled in and vetted by maintainers. The
+// community registry is the open-submission tier: a JSON file of pack
+// manifests, contributed by PR to `community/registry.json` and fetched at
+// runtime, so new packs become installable without a release. Packs are DATA
+// (ontology files fetched over HTTP), never code.
+
+/// A community-contributed ontology pack, loaded at runtime from the registry.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct CommunityEntry {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub domain: String,
+    pub url: String,
+    /// One of: turtle, rdfxml, ntriples, nquads, trig
+    pub format: String,
+    #[serde(default)]
+    pub maintainer: Option<String>,
+    #[serde(default)]
+    pub homepage: Option<String>,
+    #[serde(default)]
+    pub license: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CommunityRegistry {
+    pub version: u32,
+    pub packs: Vec<CommunityEntry>,
+}
+
+/// Canonical location of the community registry on the default branch.
+pub const DEFAULT_COMMUNITY_REGISTRY_URL: &str =
+    "https://raw.githubusercontent.com/fabio-rovai/open-ontologies/main/community/registry.json";
+
+/// Resolve where the community registry comes from, in priority order:
+/// 1. `OPEN_ONTOLOGIES_COMMUNITY_REGISTRY` (a URL or a local file path)
+/// 2. `./community/registry.json` if present (source checkouts, air-gapped installs)
+/// 3. the canonical GitHub raw URL
+pub fn community_registry_source() -> String {
+    if let Ok(v) = std::env::var("OPEN_ONTOLOGIES_COMMUNITY_REGISTRY")
+        && !v.trim().is_empty() {
+            return v;
+        }
+    let local = std::path::Path::new("community/registry.json");
+    if local.exists() {
+        return local.to_string_lossy().into_owned();
+    }
+    DEFAULT_COMMUNITY_REGISTRY_URL.to_string()
+}
+
+/// Fetch and parse the community registry from wherever
+/// [`community_registry_source`] resolves to. Returns (packs, shadowed_ids,
+/// source) so callers can attribute provenance in their output.
+pub async fn load_community_packs() -> Result<(Vec<CommunityEntry>, Vec<String>, String), String> {
+    let source = community_registry_source();
+    let json = if source.starts_with("http://") || source.starts_with("https://") {
+        crate::graph::GraphStore::fetch_url(&source)
+            .await
+            .map_err(|e| format!("registry fetch failed ({source}): {e}"))?
+    } else {
+        std::fs::read_to_string(&source)
+            .map_err(|e| format!("registry read failed ({source}): {e}"))?
+    };
+    let (packs, shadowed) = parse_community_registry(&json)?;
+    Ok((packs, shadowed, source))
+}
+
+/// Parse and validate registry JSON. Rejects malformed manifests outright;
+/// packs whose IDs collide with the curated catalogue are dropped (curated
+/// wins) and reported back so the caller can surface the shadowing.
+pub fn parse_community_registry(json: &str) -> Result<(Vec<CommunityEntry>, Vec<String>), String> {
+    let registry: CommunityRegistry =
+        serde_json::from_str(json).map_err(|e| format!("invalid registry JSON: {e}"))?;
+    if registry.version != 1 {
+        return Err(format!("unsupported registry version {}", registry.version));
+    }
+    let mut shadowed = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut packs = Vec::new();
+    for pack in registry.packs {
+        if pack.id.is_empty()
+            || !pack.id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        {
+            return Err(format!(
+                "pack id '{}' is invalid: ids are lowercase kebab-case ([a-z0-9-])",
+                pack.id
+            ));
+        }
+        if parse_format(&pack.format).is_none() {
+            return Err(format!(
+                "pack '{}' declares unknown format '{}' (expected turtle|rdfxml|ntriples|nquads|trig)",
+                pack.id, pack.format
+            ));
+        }
+        if !(pack.url.starts_with("https://") || pack.url.starts_with("http://")) {
+            return Err(format!("pack '{}' url must be http(s): {}", pack.id, pack.url));
+        }
+        if find(&pack.id).is_some() {
+            shadowed.push(pack.id);
+            continue;
+        }
+        if !seen.insert(pack.id.clone()) {
+            return Err(format!("duplicate pack id '{}' in registry", pack.id));
+        }
+        packs.push(pack);
+    }
+    Ok((packs, shadowed))
+}
+
+// ─── Shared CLI surface ──────────────────────────────────────────────
+//
+// `marketplace list` and `marketplace install` are one user-facing command with
+// two implementations behind it: the local one in `main.rs` and the batch one in
+// `batch.rs` that serves it whenever a daemon is running. The two had drifted —
+// the batch copy consulted only the curated catalogue and never loaded community
+// packs — so the same command answered with a different catalogue depending on
+// whether a daemon happened to be up, and said nothing about the difference.
+// Both now go through the functions below.
+//
+// The MCP tool in `server.rs` deliberately reports a richer shape (urls,
+// maintainer, shadowing warnings) and is left as its own surface.
+
+/// One pack resolved for installation, from either tier.
+pub struct ResolvedPack {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub format: RdfFormat,
+}
+
+/// The catalogue as the CLI reports it: curated entries first, then community
+/// packs, which can never shadow a curated id. The second element is a message
+/// about the community registry when it could not be loaded, which is reported
+/// rather than being allowed to fail the listing.
+pub async fn cli_list(domain: Option<&str>) -> (Vec<serde_json::Value>, Option<String>) {
+    let mut items: Vec<serde_json::Value> = list(domain)
+        .iter()
+        .map(|e| {
+            serde_json::json!({
+                "id": e.id,
+                "name": e.name,
+                "description": e.description,
+                "domain": e.domain,
+                "format": format_name(e.format),
+                "source": "curated",
+            })
+        })
+        .collect();
+
+    let mut community_error = None;
+    match load_community_packs().await {
+        Ok((packs, _shadowed, _source)) => {
+            for p in packs
+                .iter()
+                .filter(|p| domain.is_none_or(|d| p.domain == d))
+            {
+                items.push(serde_json::json!({
+                    "id": p.id,
+                    "name": p.name,
+                    "description": p.description,
+                    "domain": p.domain,
+                    "format": p.format,
+                    "source": "community",
+                }));
+            }
+        }
+        Err(e) => community_error = Some(e),
+    }
+    (items, community_error)
+}
+
+/// Resolve an install id across both tiers, curated first. The error is the
+/// message to show the user.
+pub async fn cli_resolve(id: &str) -> Result<ResolvedPack, String> {
+    if let Some(e) = find(id) {
+        return Ok(ResolvedPack {
+            id: e.id.to_string(),
+            name: e.name.to_string(),
+            url: e.url.to_string(),
+            format: e.format,
+        });
+    }
+    let community = match load_community_packs().await {
+        Ok((packs, _, _)) => packs.into_iter().find(|p| p.id == id),
+        Err(_) => None,
+    };
+    match community.and_then(|p| {
+        parse_format(&p.format).map(|f| ResolvedPack {
+            id: p.id,
+            name: p.name,
+            url: p.url,
+            format: f,
+        })
+    }) {
+        Some(r) => Ok(r),
+        None => Err(format!(
+            "Unknown ontology ID: '{}'. Run 'marketplace list' to see curated and community IDs.",
+            id
+        )),
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,5 +588,57 @@ mod tests {
         assert_ne!(live.url, frozen.url);
         assert!(live.url.contains("IES-Org"), "live preset should point at IES-Org");
         assert!(frozen.url.contains("dstl/IES4"), "frozen preset should point at archived dstl/IES4");
+    }
+
+    #[test]
+    fn community_registry_parses_and_validates() {
+        let json = r#"{"version":1,"packs":[{
+            "id":"pizza","name":"Pizza Ontology","description":"Teaching ontology",
+            "domain":"teaching","url":"https://example.org/pizza.owl","format":"rdfxml",
+            "maintainer":"someone","license":"CC-BY-4.0"}]}"#;
+        let (packs, shadowed) = parse_community_registry(json).unwrap();
+        assert_eq!(packs.len(), 1);
+        assert!(shadowed.is_empty());
+        assert_eq!(packs[0].id, "pizza");
+        assert!(parse_format(&packs[0].format).is_some());
+    }
+
+    #[test]
+    fn community_pack_shadowing_curated_id_is_dropped_and_reported() {
+        // A community pack must never override a curated entry — `foaf` is curated.
+        let json = r#"{"version":1,"packs":[{
+            "id":"foaf","name":"Fake FOAF","description":"x",
+            "domain":"people","url":"https://example.org/x.ttl","format":"turtle"}]}"#;
+        let (packs, shadowed) = parse_community_registry(json).unwrap();
+        assert!(packs.is_empty());
+        assert_eq!(shadowed, vec!["foaf"]);
+    }
+
+    #[test]
+    fn community_registry_rejects_bad_ids_formats_urls_and_dupes() {
+        let bad_id = r#"{"version":1,"packs":[{"id":"Bad_ID","name":"x","description":"x","domain":"x","url":"https://e.org/x","format":"turtle"}]}"#;
+        assert!(parse_community_registry(bad_id).is_err());
+        let bad_format = r#"{"version":1,"packs":[{"id":"ok","name":"x","description":"x","domain":"x","url":"https://e.org/x","format":"jsonld"}]}"#;
+        assert!(parse_community_registry(bad_format).is_err());
+        let bad_url = r#"{"version":1,"packs":[{"id":"ok","name":"x","description":"x","domain":"x","url":"ftp://e.org/x","format":"turtle"}]}"#;
+        assert!(parse_community_registry(bad_url).is_err());
+        let dupe = r#"{"version":1,"packs":[
+            {"id":"ok","name":"x","description":"x","domain":"x","url":"https://e.org/x","format":"turtle"},
+            {"id":"ok","name":"y","description":"y","domain":"y","url":"https://e.org/y","format":"turtle"}]}"#;
+        assert!(parse_community_registry(dupe).is_err());
+        let bad_version = r#"{"version":2,"packs":[]}"#;
+        assert!(parse_community_registry(bad_version).is_err());
+    }
+
+    #[test]
+    fn shipped_community_registry_is_valid() {
+        // The registry that ships in-tree (and is served from GitHub raw as the
+        // default remote registry) must always parse — a broken merge here
+        // would break every user's `onto_marketplace list`.
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/community/registry.json");
+        let json = std::fs::read_to_string(path).expect("community/registry.json missing");
+        let (packs, shadowed) = parse_community_registry(&json).expect("shipped registry invalid");
+        assert!(shadowed.is_empty(), "shipped registry shadows curated ids: {shadowed:?}");
+        assert!(!packs.is_empty(), "shipped registry should seed at least one pack");
     }
 }

@@ -1,5 +1,14 @@
 use std::sync::Mutex;
 
+use crate::engine;
+
+/// Pure construction of the MCP endpoint URL from a port, kept separate from
+/// port resolution so it can be unit-tested without touching the network or
+/// environment variables.
+fn mcp_endpoint(port: u16) -> String {
+    format!("http://127.0.0.1:{port}/mcp")
+}
+
 pub struct McpState {
     pub session_id: Mutex<Option<String>>,
     pub client: reqwest::Client,
@@ -14,7 +23,7 @@ pub async fn mcp_call(
     // Try the call; if the session has expired, reinitialize and retry once
     match do_mcp_call(&method, &params, &state).await {
         Err(ref e) if e.contains("Session not found") || e.contains("Not Found") => {
-            // Session expired — reinitialize and retry
+            // Session expired, reinitialize and retry
             reinitialize(&state).await?;
             do_mcp_call(&method, &params, &state).await
         }
@@ -61,7 +70,7 @@ async fn do_mcp_call(
     };
 
     let mut req = client
-        .post("http://127.0.0.1:8080/mcp")
+        .post(mcp_endpoint(engine::engine_port()))
         .header("Content-Type", "application/json")
         .header("Accept", "application/json, text/event-stream")
         .json(&body);
@@ -81,7 +90,7 @@ async fn do_mcp_call(
         }
     }
 
-    // Notifications get 202 with empty body — that's success
+    // Notifications get 202 with empty body, that's success
     if is_notification {
         return Ok(serde_json::Value::Null);
     }
@@ -136,4 +145,61 @@ fn rand_id() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.subsec_nanos() as u64)
         .unwrap_or(1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mcp_endpoint_tracks_the_configured_port_not_a_literal() {
+        assert_eq!(mcp_endpoint(8137), "http://127.0.0.1:8137/mcp");
+        assert_eq!(mcp_endpoint(9001), "http://127.0.0.1:9001/mcp");
+        // The regression this guards against: the engine's default port
+        // changed away from 8080, but this call site kept the old literal.
+        assert_ne!(mcp_endpoint(8137), "http://127.0.0.1:8080/mcp");
+    }
+
+    // Rust runs unit tests in parallel threads within one process, so a test
+    // that mutates a process environment variable races every other test
+    // that reads or writes the environment concurrently (std::env::set_var
+    // and remove_var are `unsafe` for exactly this reason). This lock
+    // serializes the one test below that needs to do it, so it never
+    // overlaps another env mutation in this crate.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn mcp_endpoint_composes_with_the_live_env_backed_port_resolver() {
+        const VAR: &str = "OPEN_ONTOLOGIES_STUDIO_PORT";
+        const DISTINCTIVE_PORT: &str = "48213";
+
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let previous = std::env::var(VAR).ok();
+
+        // SAFETY: ENV_LOCK above guarantees no other test in this process is
+        // reading or writing the environment while this section runs.
+        unsafe {
+            std::env::set_var(VAR, DISTINCTIVE_PORT);
+        }
+        let endpoint = mcp_endpoint(engine::engine_port());
+        unsafe {
+            match &previous {
+                Some(value) => std::env::set_var(VAR, value),
+                None => std::env::remove_var(VAR),
+            }
+        }
+
+        // This calls the same two functions do_mcp_call's real call site
+        // composes (`mcp_endpoint(engine::engine_port())`), with
+        // engine_port() reading a live, env-overridden value rather than a
+        // literal passed in by hand, as the first test above does. It does
+        // NOT call do_mcp_call itself, so it does not exercise that call
+        // site directly: if do_mcp_call's `.post(...)` line were changed to
+        // build its URL a different way (or inline a literal), this test
+        // would keep passing regardless, because it never invokes that
+        // function. What this proves is narrower: engine::engine_port()'s
+        // env-var override reaches mcp_endpoint() correctly when composed
+        // the same way that call site composes them.
+        assert_eq!(endpoint, "http://127.0.0.1:48213/mcp");
+    }
 }

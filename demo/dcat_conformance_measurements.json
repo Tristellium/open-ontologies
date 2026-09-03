@@ -1,0 +1,1072 @@
+{
+  "classes": 26,
+  "classesWithZeroBoundProperties": [
+    "Concept",
+    "Identifier"
+  ],
+  "commit": "7a6e803fb94ee9903e7e7405ec4afcc8da13383f",
+  "corpusTriples": {
+    "asPublished": 73,
+    "withDeclaredBinding": 1381,
+    "withObservedBinding": 1383,
+    "withRealContextTyped": 997,
+    "withRealContextVerbatim": 73
+  },
+  "examples": {
+    "asPublished": {
+      "dcatPredicateTriples": 0,
+      "distinctPredicates": 1,
+      "errors": [
+        {
+          "error": "example root is not a JSON object",
+          "file": "minimal_string_example.json"
+        }
+      ],
+      "files": 115,
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          76
+        ]
+      ],
+      "triples": 76,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_object_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json"
+      ],
+      "zeroTripleFiles": 38
+    },
+    "withDeclaredBinding": {
+      "dcatPredicateTriples": 228,
+      "distinctPredicates": 123,
+      "errors": [],
+      "files": 115,
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          281
+        ],
+        [
+          "http://purl.org/dc/terms/title",
+          114
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          75
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/name",
+          66
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#prefLabel",
+          47
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          44
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#fn",
+          43
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#hasEmail",
+          43
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          38
+        ],
+        [
+          "http://purl.org/dc/terms/publisher",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#notation",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#definition",
+          32
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#keyword",
+          28
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          17
+        ],
+        [
+          "http://purl.org/dc/terms/modified",
+          16
+        ],
+        [
+          "http://data.resources.gov/ontology/dcat-us#restrictionStatus",
+          15
+        ],
+        [
+          "http://purl.org/dc/terms/type",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#downloadURL",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#accessURL",
+          12
+        ],
+        [
+          "http://www.w3.org/ns/dcat#hadRole",
+          12
+        ],
+        [
+          "http://www.w3.org/ns/dcat#startDate",
+          12
+        ],
+        [
+          "http://data.resources.gov/ontology/dcat-us#restrictionNote",
+          11
+        ],
+        [
+          "http://purl.org/dc/terms/language",
+          11
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#altLabel",
+          11
+        ]
+      ],
+      "triples": 1508,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json"
+      ],
+      "zeroTripleFiles": 10
+    },
+    "withObservedBinding": {
+      "dcatPredicateTriples": 228,
+      "distinctPredicates": 123,
+      "errors": [],
+      "files": 115,
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          281
+        ],
+        [
+          "http://purl.org/dc/terms/title",
+          114
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          75
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/name",
+          66
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#prefLabel",
+          47
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          44
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#fn",
+          43
+        ],
+        [
+          "http://www.w3.org/2006/vcard/ns#hasEmail",
+          43
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          38
+        ],
+        [
+          "http://purl.org/dc/terms/publisher",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#notation",
+          34
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#definition",
+          32
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          31
+        ],
+        [
+          "http://www.w3.org/ns/dcat#keyword",
+          28
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          17
+        ],
+        [
+          "http://purl.org/dc/terms/modified",
+          16
+        ],
+        [
+          "http://data.resources.gov/ontology/dcat-us#restrictionStatus",
+          15
+        ],
+        [
+          "http://purl.org/dc/terms/type",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#downloadURL",
+          15
+        ],
+        [
+          "http://www.w3.org/ns/dcat#accessURL",
+          12
+        ],
+        [
+          "http://www.w3.org/ns/dcat#hadRole",
+          12
+        ],
+        [
+          "http://www.w3.org/ns/dcat#startDate",
+          12
+        ],
+        [
+          "http://data.resources.gov/ontology/dcat-us#restrictionNote",
+          11
+        ],
+        [
+          "http://purl.org/dc/terms/language",
+          11
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#altLabel",
+          11
+        ]
+      ],
+      "triples": 1510,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json"
+      ],
+      "zeroTripleFiles": 10
+    },
+    "withRealContextTyped": {
+      "dcatPredicateTriples": 184,
+      "distinctPredicates": 114,
+      "errors": [],
+      "files": 115,
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          230
+        ],
+        [
+          "http://purl.org/dc/terms/title",
+          82
+        ],
+        [
+          "http://purl.org/dc/terms/description",
+          57
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#prefLabel",
+          37
+        ],
+        [
+          "http://purl.org/dc/terms/identifier",
+          31
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#inScheme",
+          29
+        ],
+        [
+          "http://xmlns.com/foaf/0.1/name",
+          28
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#notation",
+          26
+        ],
+        [
+          "http://www.w3.org/ns/dcat#contactPoint",
+          26
+        ],
+        [
+          "http://purl.org/dc/terms/publisher",
+          25
+        ],
+        [
+          "http://www.w3.org/ns/dcat#keyword",
+          24
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#definition",
+          23
+        ],
+        [
+          "http://purl.org/dc/terms/issued",
+          15
+        ],
+        [
+          "http://purl.org/dc/terms/type",
+          13
+        ],
+        [
+          "http://www.w3.org/ns/dcat#downloadURL",
+          13
+        ],
+        [
+          "http://purl.org/dc/terms/modified",
+          12
+        ],
+        [
+          "http://www.w3.org/2004/02/skos/core#altLabel",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/adms#schemaAgency",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/dcat#mediaType",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/dcat#startDate",
+          11
+        ],
+        [
+          "http://www.w3.org/ns/dcat#endDate",
+          10
+        ],
+        [
+          "http://www.w3.org/ns/dcat#hadRole",
+          9
+        ],
+        [
+          "http://purl.org/dc/terms/format",
+          8
+        ],
+        [
+          "http://purl.org/dc/terms/language",
+          8
+        ],
+        [
+          "http://purl.org/dc/terms/relation",
+          8
+        ]
+      ],
+      "triples": 1069,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json"
+      ],
+      "zeroTripleFiles": 39
+    },
+    "withRealContextVerbatim": {
+      "dcatPredicateTriples": 0,
+      "distinctPredicates": 1,
+      "errors": [],
+      "files": 115,
+      "topPredicates": [
+        [
+          "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+          76
+        ]
+      ],
+      "triples": 76,
+      "zeroTripleFileNames": [
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_example.json",
+        "minimal_object_example.json",
+        "minimal_string_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json",
+        "null_example.json"
+      ],
+      "zeroTripleFiles": 39
+    }
+  },
+  "lenientTermCount": 22,
+  "lenientTerms": [
+    "accessRights",
+    "accrualPeriodicity",
+    "algorithm",
+    "category",
+    "compressFormat",
+    "format",
+    "geometry",
+    "hadRole",
+    "inDimension",
+    "language",
+    "liabilityStatement",
+    "mediaType",
+    "packageFormat",
+    "provenance",
+    "relation",
+    "restrictionStatus",
+    "rights",
+    "source",
+    "status",
+    "tel",
+    "theme",
+    "unitMeasure"
+  ],
+  "measured": "2026-08-25, this repository, no network, no model call",
+  "perFile": {
+    "asPublishedTriples": {
+      "AccessRestriction/good/minimal_example.json": 0,
+      "AccessRestriction/good/null_example.json": 0,
+      "AccessRestriction/good/typical_example.json": 1,
+      "Activity/good/complete_example.json": 1,
+      "Activity/good/minimal_example.json": 0,
+      "Activity/good/null_example.json": 0,
+      "Activity/good/typical_example.json": 1,
+      "Address/good/complete_example.json": 1,
+      "Address/good/minimal_example.json": 1,
+      "Address/good/null_example.json": 0,
+      "Address/good/typical_example.json": 1,
+      "Agent/good/complete_example.json": 1,
+      "Agent/good/minimal_example.json": 0,
+      "Agent/good/null_example.json": 0,
+      "Agent/good/simple_category_example.json": 1,
+      "Agent/good/typical_example.json": 1,
+      "Attribution/good/complete_example.json": 1,
+      "Attribution/good/minimal_example.json": 0,
+      "Attribution/good/typical_example.json": 1,
+      "CUIRestriction/good/complete_example.json": 1,
+      "CUIRestriction/good/minimal_example.json": 1,
+      "CUIRestriction/good/null_example.json": 0,
+      "CUIRestriction/good/typical_example.json": 1,
+      "Catalog/good/complete_example.json": 1,
+      "Catalog/good/minimal_example.json": 1,
+      "Catalog/good/typical_example.json": 1,
+      "CatalogRecord/good/complete_example.json": 1,
+      "CatalogRecord/good/minimal_example.json": 0,
+      "CatalogRecord/good/typical_example.json": 1,
+      "Checksum/good/complete_example.json": 1,
+      "Checksum/good/minimal_example.json": 1,
+      "Checksum/good/null_example.json": 0,
+      "Checksum/good/typical_example.json": 1,
+      "Concept/good/complete_example.json": 1,
+      "Concept/good/minimal_object.json": 1,
+      "Concept/good/null_example.json": 0,
+      "Concept/good/typical_example.json": 1,
+      "ConceptScheme/good/complete_example.json": 1,
+      "ConceptScheme/good/minimal_example.json": 1,
+      "ConceptScheme/good/null_example.json": 0,
+      "ConceptScheme/good/typical_example.json": 1,
+      "DataService/good/complete_example.json": 1,
+      "DataService/good/minimal_example.json": 0,
+      "DataService/good/null_example.json": 0,
+      "DataService/good/typical_example.json": 1,
+      "Dataset/good/complete_example.json": 1,
+      "Dataset/good/comprehensive-dataset.json": 1,
+      "Dataset/good/good-accrual-periodicity.json": 1,
+      "Dataset/good/minimal_example.json": 0,
+      "Dataset/good/null_example.json": 0,
+      "Dataset/good/theme_full_example.json": 1,
+      "Dataset/good/theme_simple_example.json": 1,
+      "Dataset/good/typical_example.json": 1,
+      "DatasetSeries/good/complete_example.json": 1,
+      "DatasetSeries/good/good-accrual-periodicity.json": 1,
+      "DatasetSeries/good/minimal_example.json": 0,
+      "DatasetSeries/good/null_example.json": 0,
+      "DatasetSeries/good/typical_example.json": 1,
+      "Distribution/good/complete_example.json": 1,
+      "Distribution/good/minimal_example.json": 0,
+      "Distribution/good/null_example.json": 0,
+      "Distribution/good/typical_example.json": 1,
+      "Document/good/complete_example.json": 1,
+      "Document/good/minimal_example.json": 0,
+      "Document/good/null_example.json": 0,
+      "Document/good/typical_example.json": 1,
+      "Identifier/good/complete_example.json": 1,
+      "Identifier/good/minimal_object_example.json": 0,
+      "Identifier/good/minimal_string_example.json": 0,
+      "Identifier/good/null_example.json": 0,
+      "Identifier/good/typical_example.json": 1,
+      "Kind/good/complete_example.json": 1,
+      "Kind/good/minimal_example.json": 0,
+      "Kind/good/null_example.json": 0,
+      "Kind/good/typical_example.json": 1,
+      "Location/good/bbox_geojson.json": 1,
+      "Location/good/bbox_wkt.json": 1,
+      "Location/good/centroid_geojson.json": 1,
+      "Location/good/complete_example.json": 1,
+      "Location/good/geometry_geojson.json": 1,
+      "Location/good/identifier_iri_reference.json": 1,
+      "Location/good/minimal_example.json": 1,
+      "Location/good/null_example.json": 0,
+      "Location/good/typical_example.json": 1,
+      "Metric/good/complete_example.json": 1,
+      "Metric/good/minimal_example.json": 1,
+      "Metric/good/null_example.json": 0,
+      "Metric/good/typical_example.json": 1,
+      "Organization/good/complete_example.json": 1,
+      "Organization/good/minimal_example.json": 1,
+      "Organization/good/null_example.json": 0,
+      "Organization/good/typical_example.json": 1,
+      "PeriodOfTime/good/complete_example.json": 1,
+      "PeriodOfTime/good/minimal_example_end_date_only.json": 1,
+      "PeriodOfTime/good/minimal_example_start_date_only.json": 1,
+      "PeriodOfTime/good/null_example.json": 0,
+      "PeriodOfTime/good/typical_example.json": 1,
+      "PeriodOfTime/good/year_month_example.json": 1,
+      "PeriodOfTime/good/year_only_example.json": 1,
+      "QualityMeasurement/good/complete_example.json": 1,
+      "QualityMeasurement/good/minimal_example.json": 0,
+      "QualityMeasurement/good/null_example.json": 0,
+      "QualityMeasurement/good/typical_example.json": 1,
+      "Relationship/good/complete_example.json": 1,
+      "Relationship/good/minimal_example.json": 1,
+      "Relationship/good/null_example.json": 0,
+      "Relationship/good/typical_example.json": 1,
+      "Standard/good/complete_example.json": 1,
+      "Standard/good/minimal_example.json": 0,
+      "Standard/good/null_example.json": 0,
+      "Standard/good/typical_example.json": 1,
+      "UseRestriction/good/complete_example.json": 1,
+      "UseRestriction/good/minimal_example.json": 0,
+      "UseRestriction/good/null_example.json": 0,
+      "UseRestriction/good/typical_example.json": 1
+    },
+    "withObservedBindingViolations": {
+      "AccessRestriction/good/minimal_example.json": 0,
+      "AccessRestriction/good/null_example.json": 0,
+      "AccessRestriction/good/typical_example.json": 1,
+      "Activity/good/complete_example.json": 0,
+      "Activity/good/minimal_example.json": 0,
+      "Activity/good/null_example.json": 0,
+      "Activity/good/typical_example.json": 1,
+      "Address/good/complete_example.json": 0,
+      "Address/good/minimal_example.json": 0,
+      "Address/good/null_example.json": 0,
+      "Address/good/typical_example.json": 0,
+      "Agent/good/complete_example.json": 1,
+      "Agent/good/minimal_example.json": 0,
+      "Agent/good/null_example.json": 0,
+      "Agent/good/simple_category_example.json": 1,
+      "Agent/good/typical_example.json": 1,
+      "Attribution/good/complete_example.json": 1,
+      "Attribution/good/minimal_example.json": 0,
+      "Attribution/good/typical_example.json": 2,
+      "CUIRestriction/good/complete_example.json": 0,
+      "CUIRestriction/good/minimal_example.json": 0,
+      "CUIRestriction/good/null_example.json": 0,
+      "CUIRestriction/good/typical_example.json": 0,
+      "Catalog/good/complete_example.json": 19,
+      "Catalog/good/minimal_example.json": 2,
+      "Catalog/good/typical_example.json": 2,
+      "CatalogRecord/good/complete_example.json": 5,
+      "CatalogRecord/good/minimal_example.json": 0,
+      "CatalogRecord/good/typical_example.json": 3,
+      "Checksum/good/complete_example.json": 1,
+      "Checksum/good/minimal_example.json": 1,
+      "Checksum/good/null_example.json": 0,
+      "Checksum/good/typical_example.json": 1,
+      "Concept/good/complete_example.json": 0,
+      "Concept/good/minimal_object.json": 1,
+      "Concept/good/null_example.json": 0,
+      "Concept/good/typical_example.json": 0,
+      "ConceptScheme/good/complete_example.json": 3,
+      "ConceptScheme/good/minimal_example.json": 0,
+      "ConceptScheme/good/null_example.json": 0,
+      "ConceptScheme/good/typical_example.json": 1,
+      "DataService/good/complete_example.json": 14,
+      "DataService/good/minimal_example.json": 0,
+      "DataService/good/null_example.json": 0,
+      "DataService/good/typical_example.json": 3,
+      "Dataset/good/complete_example.json": 35,
+      "Dataset/good/comprehensive-dataset.json": 33,
+      "Dataset/good/good-accrual-periodicity.json": 4,
+      "Dataset/good/minimal_example.json": 0,
+      "Dataset/good/null_example.json": 0,
+      "Dataset/good/theme_full_example.json": 2,
+      "Dataset/good/theme_simple_example.json": 4,
+      "Dataset/good/typical_example.json": 13,
+      "DatasetSeries/good/complete_example.json": 17,
+      "DatasetSeries/good/good-accrual-periodicity.json": 1,
+      "DatasetSeries/good/minimal_example.json": 0,
+      "DatasetSeries/good/null_example.json": 0,
+      "DatasetSeries/good/typical_example.json": 18,
+      "Distribution/good/complete_example.json": 14,
+      "Distribution/good/minimal_example.json": 0,
+      "Distribution/good/null_example.json": 0,
+      "Distribution/good/typical_example.json": 6,
+      "Document/good/complete_example.json": 6,
+      "Document/good/minimal_example.json": 0,
+      "Document/good/null_example.json": 0,
+      "Document/good/typical_example.json": 3,
+      "Identifier/good/complete_example.json": 2,
+      "Identifier/good/minimal_object_example.json": 0,
+      "Identifier/good/minimal_string_example.json": 0,
+      "Identifier/good/null_example.json": 0,
+      "Identifier/good/typical_example.json": 0,
+      "Kind/good/complete_example.json": 1,
+      "Kind/good/minimal_example.json": 0,
+      "Kind/good/null_example.json": 0,
+      "Kind/good/typical_example.json": 1,
+      "Location/good/bbox_geojson.json": 2,
+      "Location/good/bbox_wkt.json": 1,
+      "Location/good/centroid_geojson.json": 2,
+      "Location/good/complete_example.json": 7,
+      "Location/good/geometry_geojson.json": 2,
+      "Location/good/identifier_iri_reference.json": 1,
+      "Location/good/minimal_example.json": 0,
+      "Location/good/null_example.json": 0,
+      "Location/good/typical_example.json": 1,
+      "Metric/good/complete_example.json": 2,
+      "Metric/good/minimal_example.json": 2,
+      "Metric/good/null_example.json": 0,
+      "Metric/good/typical_example.json": 2,
+      "Organization/good/complete_example.json": 1,
+      "Organization/good/minimal_example.json": 1,
+      "Organization/good/null_example.json": 0,
+      "Organization/good/typical_example.json": 1,
+      "PeriodOfTime/good/complete_example.json": 2,
+      "PeriodOfTime/good/minimal_example_end_date_only.json": 1,
+      "PeriodOfTime/good/minimal_example_start_date_only.json": 1,
+      "PeriodOfTime/good/null_example.json": 0,
+      "PeriodOfTime/good/typical_example.json": 2,
+      "PeriodOfTime/good/year_month_example.json": 2,
+      "PeriodOfTime/good/year_only_example.json": 1,
+      "QualityMeasurement/good/complete_example.json": 3,
+      "QualityMeasurement/good/minimal_example.json": 0,
+      "QualityMeasurement/good/null_example.json": 0,
+      "QualityMeasurement/good/typical_example.json": 2,
+      "Relationship/good/complete_example.json": 2,
+      "Relationship/good/minimal_example.json": 2,
+      "Relationship/good/null_example.json": 0,
+      "Relationship/good/typical_example.json": 2,
+      "Standard/good/complete_example.json": 2,
+      "Standard/good/minimal_example.json": 0,
+      "Standard/good/null_example.json": 0,
+      "Standard/good/typical_example.json": 2,
+      "UseRestriction/good/complete_example.json": 0,
+      "UseRestriction/good/minimal_example.json": 0,
+      "UseRestriction/good/null_example.json": 0,
+      "UseRestriction/good/typical_example.json": 1
+    },
+    "withRealContextTypedViolations": {
+      "AccessRestriction/good/minimal_example.json": 0,
+      "AccessRestriction/good/null_example.json": 0,
+      "AccessRestriction/good/typical_example.json": 0,
+      "Activity/good/complete_example.json": 0,
+      "Activity/good/minimal_example.json": 0,
+      "Activity/good/null_example.json": 0,
+      "Activity/good/typical_example.json": 0,
+      "Address/good/complete_example.json": 0,
+      "Address/good/minimal_example.json": 0,
+      "Address/good/null_example.json": 0,
+      "Address/good/typical_example.json": 0,
+      "Agent/good/complete_example.json": 1,
+      "Agent/good/minimal_example.json": 0,
+      "Agent/good/null_example.json": 0,
+      "Agent/good/simple_category_example.json": 0,
+      "Agent/good/typical_example.json": 0,
+      "Attribution/good/complete_example.json": 0,
+      "Attribution/good/minimal_example.json": 0,
+      "Attribution/good/typical_example.json": 1,
+      "CUIRestriction/good/complete_example.json": 0,
+      "CUIRestriction/good/minimal_example.json": 0,
+      "CUIRestriction/good/null_example.json": 0,
+      "CUIRestriction/good/typical_example.json": 0,
+      "Catalog/good/complete_example.json": 0,
+      "Catalog/good/minimal_example.json": 0,
+      "Catalog/good/typical_example.json": 0,
+      "CatalogRecord/good/complete_example.json": 2,
+      "CatalogRecord/good/minimal_example.json": 0,
+      "CatalogRecord/good/typical_example.json": 2,
+      "Checksum/good/complete_example.json": 0,
+      "Checksum/good/minimal_example.json": 0,
+      "Checksum/good/null_example.json": 0,
+      "Checksum/good/typical_example.json": 0,
+      "Concept/good/complete_example.json": 0,
+      "Concept/good/minimal_object.json": 1,
+      "Concept/good/null_example.json": 0,
+      "Concept/good/typical_example.json": 0,
+      "ConceptScheme/good/complete_example.json": 3,
+      "ConceptScheme/good/minimal_example.json": 0,
+      "ConceptScheme/good/null_example.json": 0,
+      "ConceptScheme/good/typical_example.json": 1,
+      "DataService/good/complete_example.json": 8,
+      "DataService/good/minimal_example.json": 0,
+      "DataService/good/null_example.json": 0,
+      "DataService/good/typical_example.json": 3,
+      "Dataset/good/complete_example.json": 15,
+      "Dataset/good/comprehensive-dataset.json": 17,
+      "Dataset/good/good-accrual-periodicity.json": 2,
+      "Dataset/good/minimal_example.json": 0,
+      "Dataset/good/null_example.json": 0,
+      "Dataset/good/theme_full_example.json": 2,
+      "Dataset/good/theme_simple_example.json": 2,
+      "Dataset/good/typical_example.json": 8,
+      "DatasetSeries/good/complete_example.json": 15,
+      "DatasetSeries/good/good-accrual-periodicity.json": 0,
+      "DatasetSeries/good/minimal_example.json": 0,
+      "DatasetSeries/good/null_example.json": 0,
+      "DatasetSeries/good/typical_example.json": 17,
+      "Distribution/good/complete_example.json": 5,
+      "Distribution/good/minimal_example.json": 0,
+      "Distribution/good/null_example.json": 0,
+      "Distribution/good/typical_example.json": 2,
+      "Document/good/complete_example.json": 3,
+      "Document/good/minimal_example.json": 0,
+      "Document/good/null_example.json": 0,
+      "Document/good/typical_example.json": 2,
+      "Identifier/good/complete_example.json": 1,
+      "Identifier/good/minimal_object_example.json": 0,
+      "Identifier/good/minimal_string_example.json": 0,
+      "Identifier/good/null_example.json": 0,
+      "Identifier/good/typical_example.json": 0,
+      "Kind/good/complete_example.json": 0,
+      "Kind/good/minimal_example.json": 0,
+      "Kind/good/null_example.json": 0,
+      "Kind/good/typical_example.json": 0,
+      "Location/good/bbox_geojson.json": 2,
+      "Location/good/bbox_wkt.json": 1,
+      "Location/good/centroid_geojson.json": 2,
+      "Location/good/complete_example.json": 7,
+      "Location/good/geometry_geojson.json": 2,
+      "Location/good/identifier_iri_reference.json": 1,
+      "Location/good/minimal_example.json": 0,
+      "Location/good/null_example.json": 0,
+      "Location/good/typical_example.json": 1,
+      "Metric/good/complete_example.json": 0,
+      "Metric/good/minimal_example.json": 0,
+      "Metric/good/null_example.json": 0,
+      "Metric/good/typical_example.json": 0,
+      "Organization/good/complete_example.json": 0,
+      "Organization/good/minimal_example.json": 0,
+      "Organization/good/null_example.json": 0,
+      "Organization/good/typical_example.json": 0,
+      "PeriodOfTime/good/complete_example.json": 2,
+      "PeriodOfTime/good/minimal_example_end_date_only.json": 1,
+      "PeriodOfTime/good/minimal_example_start_date_only.json": 1,
+      "PeriodOfTime/good/null_example.json": 0,
+      "PeriodOfTime/good/typical_example.json": 2,
+      "PeriodOfTime/good/year_month_example.json": 2,
+      "PeriodOfTime/good/year_only_example.json": 1,
+      "QualityMeasurement/good/complete_example.json": 0,
+      "QualityMeasurement/good/minimal_example.json": 0,
+      "QualityMeasurement/good/null_example.json": 0,
+      "QualityMeasurement/good/typical_example.json": 1,
+      "Relationship/good/complete_example.json": 0,
+      "Relationship/good/minimal_example.json": 0,
+      "Relationship/good/null_example.json": 0,
+      "Relationship/good/typical_example.json": 0,
+      "Standard/good/complete_example.json": 4,
+      "Standard/good/minimal_example.json": 0,
+      "Standard/good/null_example.json": 0,
+      "Standard/good/typical_example.json": 2,
+      "UseRestriction/good/complete_example.json": 0,
+      "UseRestriction/good/minimal_example.json": 0,
+      "UseRestriction/good/null_example.json": 0,
+      "UseRestriction/good/typical_example.json": 0
+    }
+  },
+  "realContextBaseCommit": "04acd5c25579dd70a86a436b30a33e0784965cc4",
+  "realContextBindsConceptProperties": [
+    "altLabel",
+    "altLabelMap",
+    "definition",
+    "definitionMap",
+    "inScheme",
+    "notation",
+    "prefLabel",
+    "prefLabelMap"
+  ],
+  "realContextBindsIdentifierProperties": [
+    "creator",
+    "issued",
+    "notation",
+    "schemaAgency",
+    "version"
+  ],
+  "recoveredFilesOrgPrefixCheck": {
+    "agree": false,
+    "recoveredContextOrgPrefix": "http://www.w3c.org/ns/org#",
+    "recoveredShapesOrgPrefix": "http://www.w3.org/ns/org#"
+  },
+  "recoveredFilesOrgPrefixTypoImpactDiagnosticOnly": {
+    "description": "legacyShapesOverRealContextTypedCorpus, with recovered-context.jsonld's own 'org:' prefix replaced by recovered-shapes.ttl's, diagnostic only",
+    "focusNodes": 194,
+    "focusNodesDelta": 11,
+    "violations": 153,
+    "violationsDelta": 6
+  },
+  "shacl": {
+    "legacyShapesOverDeclaredBoundCorpus": {
+      "bySeverity": {
+        "Violation": 178
+      },
+      "conforms": false,
+      "dataTriples": 1381,
+      "focusNodes": 228,
+      "matchedClassCount": 24,
+      "matchedClasses": [
+        "http://data.resources.gov/ontology/dcat-us#AccessRestriction",
+        "http://data.resources.gov/ontology/dcat-us#UseRestriction",
+        "http://purl.org/dc/terms/Location",
+        "http://purl.org/dc/terms/PeriodOfTime",
+        "http://purl.org/dc/terms/Standard",
+        "http://spdx.org/rdf/terms#Checksum",
+        "http://www.w3.org/2004/02/skos/core#Concept",
+        "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+        "http://www.w3.org/2006/vcard/ns#Kind",
+        "http://www.w3.org/ns/adms#Identifier",
+        "http://www.w3.org/ns/dcat#CatalogRecord",
+        "http://www.w3.org/ns/dcat#DataService",
+        "http://www.w3.org/ns/dcat#Dataset",
+        "http://www.w3.org/ns/dcat#DatasetSeries",
+        "http://www.w3.org/ns/dcat#Distribution",
+        "http://www.w3.org/ns/dcat#Relationship",
+        "http://www.w3.org/ns/dqv#Metric",
+        "http://www.w3.org/ns/dqv#QualityMeasurement",
+        "http://www.w3.org/ns/locn#Address",
+        "http://www.w3.org/ns/org#Organization",
+        "http://www.w3.org/ns/prov#Activity",
+        "http://www.w3.org/ns/prov#Attribution",
+        "http://xmlns.com/foaf/0.1/Agent",
+        "http://xmlns.com/foaf/0.1/Document"
+      ],
+      "shapeTriples": 4043,
+      "targetClassCount": 34,
+      "violations": 178
+    },
+    "legacyShapesOverObservedBoundCorpus": {
+      "bySeverity": {
+        "Violation": 272
+      },
+      "conforms": false,
+      "dataTriples": 1383,
+      "focusNodes": 228,
+      "matchedClassCount": 24,
+      "matchedClasses": [
+        "http://data.resources.gov/ontology/dcat-us#AccessRestriction",
+        "http://data.resources.gov/ontology/dcat-us#UseRestriction",
+        "http://purl.org/dc/terms/Location",
+        "http://purl.org/dc/terms/PeriodOfTime",
+        "http://purl.org/dc/terms/Standard",
+        "http://spdx.org/rdf/terms#Checksum",
+        "http://www.w3.org/2004/02/skos/core#Concept",
+        "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+        "http://www.w3.org/2006/vcard/ns#Kind",
+        "http://www.w3.org/ns/adms#Identifier",
+        "http://www.w3.org/ns/dcat#CatalogRecord",
+        "http://www.w3.org/ns/dcat#DataService",
+        "http://www.w3.org/ns/dcat#Dataset",
+        "http://www.w3.org/ns/dcat#DatasetSeries",
+        "http://www.w3.org/ns/dcat#Distribution",
+        "http://www.w3.org/ns/dcat#Relationship",
+        "http://www.w3.org/ns/dqv#Metric",
+        "http://www.w3.org/ns/dqv#QualityMeasurement",
+        "http://www.w3.org/ns/locn#Address",
+        "http://www.w3.org/ns/org#Organization",
+        "http://www.w3.org/ns/prov#Activity",
+        "http://www.w3.org/ns/prov#Attribution",
+        "http://xmlns.com/foaf/0.1/Agent",
+        "http://xmlns.com/foaf/0.1/Document"
+      ],
+      "shapeTriples": 4043,
+      "targetClassCount": 34,
+      "violations": 272
+    },
+    "legacyShapesOverPublishedCorpus": {
+      "bySeverity": {},
+      "conforms": true,
+      "dataTriples": 73,
+      "focusNodes": 0,
+      "matchedClassCount": 0,
+      "matchedClasses": [],
+      "shapeTriples": 4043,
+      "targetClassCount": 34,
+      "violations": 0
+    },
+    "legacyShapesOverRealContextTypedCorpus": {
+      "bySeverity": {
+        "Violation": 147
+      },
+      "conforms": false,
+      "dataTriples": 997,
+      "focusNodes": 183,
+      "matchedClassCount": 23,
+      "matchedClasses": [
+        "http://data.resources.gov/ontology/dcat-us#AccessRestriction",
+        "http://data.resources.gov/ontology/dcat-us#UseRestriction",
+        "http://purl.org/dc/terms/Location",
+        "http://purl.org/dc/terms/PeriodOfTime",
+        "http://purl.org/dc/terms/Standard",
+        "http://spdx.org/rdf/terms#Checksum",
+        "http://www.w3.org/2004/02/skos/core#Concept",
+        "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+        "http://www.w3.org/2006/vcard/ns#Kind",
+        "http://www.w3.org/ns/adms#Identifier",
+        "http://www.w3.org/ns/dcat#CatalogRecord",
+        "http://www.w3.org/ns/dcat#DataService",
+        "http://www.w3.org/ns/dcat#Dataset",
+        "http://www.w3.org/ns/dcat#DatasetSeries",
+        "http://www.w3.org/ns/dcat#Distribution",
+        "http://www.w3.org/ns/dcat#Relationship",
+        "http://www.w3.org/ns/dqv#Metric",
+        "http://www.w3.org/ns/dqv#QualityMeasurement",
+        "http://www.w3.org/ns/locn#Address",
+        "http://www.w3.org/ns/prov#Activity",
+        "http://www.w3.org/ns/prov#Attribution",
+        "http://xmlns.com/foaf/0.1/Agent",
+        "http://xmlns.com/foaf/0.1/Document"
+      ],
+      "shapeTriples": 4043,
+      "targetClassCount": 34,
+      "violations": 147
+    },
+    "legacyShapesOverRealContextVerbatimCorpus": {
+      "bySeverity": {},
+      "conforms": true,
+      "dataTriples": 73,
+      "focusNodes": 0,
+      "matchedClassCount": 0,
+      "matchedClasses": [],
+      "shapeTriples": 4043,
+      "targetClassCount": 34,
+      "violations": 0
+    }
+  }
+}

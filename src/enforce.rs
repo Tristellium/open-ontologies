@@ -156,10 +156,14 @@ impl Enforcer {
         *total += 1;
         let query = "SELECT DISTINCT ?c WHERE { \
             ?c a <http://www.w3.org/2002/07/owl#Class> . \
+            FILTER(isIRI(?c)) \
             FILTER NOT EXISTS { ?c <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?parent } \
             FILTER NOT EXISTS { ?child <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?c } \
             FILTER NOT EXISTS { ?p <http://www.w3.org/2000/01/rdf-schema#domain> ?c } \
             FILTER NOT EXISTS { ?p <http://www.w3.org/2000/01/rdf-schema#range> ?c } \
+            FILTER NOT EXISTS { ?c <http://www.w3.org/2002/07/owl#equivalentClass> ?eq } \
+            FILTER NOT EXISTS { ?eq2 <http://www.w3.org/2002/07/owl#equivalentClass> ?c } \
+            FILTER NOT EXISTS { ?c <http://www.w3.org/2002/07/owl#disjointWith> ?dj } \
         }";
 
         let orphans = self.query_iris(query, "c");
@@ -182,6 +186,7 @@ impl Enforcer {
         let query = "SELECT DISTINCT ?p WHERE { \
             { ?p a <http://www.w3.org/2002/07/owl#ObjectProperty> } UNION \
             { ?p a <http://www.w3.org/2002/07/owl#DatatypeProperty> } \
+            FILTER(isIRI(?p)) \
             FILTER NOT EXISTS { ?p <http://www.w3.org/2000/01/rdf-schema#domain> ?d } \
         }";
 
@@ -205,6 +210,7 @@ impl Enforcer {
         let query = "SELECT DISTINCT ?p WHERE { \
             { ?p a <http://www.w3.org/2002/07/owl#ObjectProperty> } UNION \
             { ?p a <http://www.w3.org/2002/07/owl#DatatypeProperty> } \
+            FILTER(isIRI(?p)) \
             FILTER NOT EXISTS { ?p <http://www.w3.org/2000/01/rdf-schema#range> ?r } \
         }";
 
@@ -227,6 +233,7 @@ impl Enforcer {
         *total += 1;
         let query = "SELECT DISTINCT ?c WHERE { \
             ?c a <http://www.w3.org/2002/07/owl#Class> . \
+            FILTER(isIRI(?c)) \
             FILTER NOT EXISTS { ?c <http://www.w3.org/2000/01/rdf-schema#label> ?l } \
         }";
 
@@ -412,7 +419,7 @@ impl Enforcer {
                         "ASK {{ <{}> <http://www.w3.org/2002/07/owl#disjointWith> <{}> }}",
                         children[i], children[j]
                     );
-                    if let Ok(result) = self.graph.sparql_select(&disjoint_query)
+                    if let Ok(result) = self.graph.sparql_select_union(&disjoint_query)
                         && !result.contains("true") {
                             all_disjoint = false;
                             break;
@@ -473,7 +480,7 @@ impl Enforcer {
             } GROUP BY ?class \
         }";
 
-        if let Ok(json) = self.graph.sparql_select(depth_query)
+        if let Ok(json) = self.graph.sparql_select_union(depth_query)
             && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json)
             && let Some(results) = parsed["results"].as_array()
             && let Some(first) = results.first()
@@ -511,7 +518,7 @@ impl Enforcer {
             } GROUP BY ?class \
         }";
 
-        if let Ok(json) = self.graph.sparql_select(avg_query)
+        if let Ok(json) = self.graph.sparql_select_union(avg_query)
             && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json)
             && let Some(results) = parsed["results"].as_array()
             && let Some(first) = results.first()
@@ -577,7 +584,7 @@ impl Enforcer {
 
     fn query_flat_hierarchy(&self, query: &str) -> Vec<(String, u64, Vec<String>)> {
         let mut results = Vec::new();
-        if let Ok(json) = self.graph.sparql_select(query)
+        if let Ok(json) = self.graph.sparql_select_union(query)
             && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json)
             && let Some(rows) = parsed["results"].as_array()
         {
@@ -614,7 +621,7 @@ impl Enforcer {
     }
 
     fn query_count(&self, query: &str) -> u64 {
-        if let Ok(json) = self.graph.sparql_select(query)
+        if let Ok(json) = self.graph.sparql_select_union(query)
             && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json)
             && let Some(results) = parsed["results"].as_array()
             && let Some(first) = results.first()
@@ -669,7 +676,7 @@ impl Enforcer {
     }
 
     fn query_iris(&self, query: &str, var: &str) -> Vec<String> {
-        if let Ok(json) = self.graph.sparql_select(query)
+        if let Ok(json) = self.graph.sparql_select_union(query)
             && let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&json)
                 && let Some(results) = parsed["results"].as_array() {
                     return results

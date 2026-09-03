@@ -64,7 +64,7 @@ impl AlignmentEngine {
             }
         "#;
 
-        let result = match store.sparql_select(query) {
+        let result = match store.sparql_select_union(query) {
             Ok(r) => r,
             Err(_) => return Vec::new(),
         };
@@ -158,7 +158,7 @@ impl AlignmentEngine {
 
     /// Helper: run a SPARQL SELECT and extract a single variable's values.
     fn extract_iris(store: &GraphStore, query: &str, var: &str) -> Vec<String> {
-        let result = match store.sparql_select(query) {
+        let result = match store.sparql_select_union(query) {
             Ok(r) => r,
             Err(_) => return Vec::new(),
         };
@@ -233,7 +233,7 @@ impl AlignmentEngine {
 
         let extract_restriction_sigs = |store: &GraphStore, class: &str| -> Vec<String> {
             let query = restriction_query(class);
-            let result = match store.sparql_select(&query) {
+            let result = match store.sparql_select_union(&query) {
                 Ok(r) => r,
                 Err(_) => return Vec::new(),
             };
@@ -435,7 +435,7 @@ impl AlignmentEngine {
                     std::collections::HashMap::new();
                 let mut any_used = false;
                 for sc in &source_classes {
-                    if let Some(src_vec) = vs.get_text_vec(&sc.iri).map(|v| v.to_vec()) {
+                    if let Some(src_vec) = vs.load_text_vec(&sc.iri) {
                         let shortlist = vs.search_cosine_hnsw(&src_vec, HNSW_TOP_K);
                         if !shortlist.is_empty() {
                             let filtered: std::collections::HashSet<String> = shortlist
@@ -491,8 +491,11 @@ impl AlignmentEngine {
                 let embedding_sim = {
                     if let Some(ref vs) = self.vecstore {
                         let vs = vs.lock().unwrap();
-                        match (vs.get_text_vec(&sc.iri), vs.get_text_vec(&tc.iri)) {
-                            (Some(a), Some(b)) => Self::embedding_similarity_score(a, b),
+                        // `load_text_vec`, not `get_text_vec`: the latter can
+                        // only answer for a resident store, and would silently
+                        // score every pair at 0.0 under text-vector eviction.
+                        match (vs.load_text_vec(&sc.iri), vs.load_text_vec(&tc.iri)) {
+                            (Some(a), Some(b)) => Self::embedding_similarity_score(&a, &b),
                             _ => 0.0,
                         }
                     } else {
@@ -1263,5 +1266,21 @@ mod tests {
             &[0.0, 0.0, 1.0],
         );
         assert!(sim2 < 0.1, "Orthogonal vectors should give low score: {sim2}");
+    }
+
+    #[test]
+    fn claim_strength_tracks_evidence_strength() {
+        // Strong name plus structural agreement is the only equivalence.
+        assert_eq!(
+            AlignmentEngine::classify_relation(0.9, 0.6, 0.0),
+            "owl:equivalentClass"
+        );
+        // A strong name alone is an exact match.
+        assert_eq!(AlignmentEngine::classify_relation(0.9, 0.1, 0.0), "skos:exactMatch");
+        // Shared parents without a strong name is a subclass claim.
+        assert_eq!(AlignmentEngine::classify_relation(0.3, 0.1, 0.7), "rdfs:subClassOf");
+        // A middling name with no structural support must not claim exactness.
+        assert_eq!(AlignmentEngine::classify_relation(0.7, 0.1, 0.1), "skos:closeMatch");
+        assert_eq!(AlignmentEngine::classify_relation(0.61, 0.0, 0.0), "skos:closeMatch");
     }
 }

@@ -1,0 +1,3124 @@
+{
+  "classes": [
+    {
+      "iri": "Address",
+      "label": "Address"
+    },
+    {
+      "iri": "Agent",
+      "label": "Agent"
+    },
+    {
+      "iri": "Attribution",
+      "label": "Attribution"
+    },
+    {
+      "iri": "Author",
+      "label": "Author"
+    },
+    {
+      "iri": "Catalog",
+      "label": "Catalog"
+    },
+    {
+      "iri": "Commit",
+      "label": "Commit"
+    },
+    {
+      "iri": "Concept",
+      "label": "Concept"
+    },
+    {
+      "iri": "ConformanceRequirement",
+      "label": "Conformance Requirement"
+    },
+    {
+      "iri": "DataService",
+      "label": "Data Service"
+    },
+    {
+      "iri": "Dataset",
+      "label": "Dataset"
+    },
+    {
+      "iri": "Distribution",
+      "label": "Distribution"
+    },
+    {
+      "iri": "Document",
+      "label": "Document"
+    },
+    {
+      "iri": "File",
+      "label": "File"
+    },
+    {
+      "iri": "Identifier",
+      "label": "Identifier"
+    },
+    {
+      "iri": "Implementation",
+      "label": "Implementation"
+    },
+    {
+      "iri": "JsonSchema",
+      "label": "JSON Schema"
+    },
+    {
+      "iri": "Kind",
+      "label": "Kind"
+    },
+    {
+      "iri": "Location",
+      "label": "Location"
+    },
+    {
+      "iri": "MetadataCatalog",
+      "label": "Metadata Catalog"
+    },
+    {
+      "iri": "MetadataElement",
+      "label": "Metadata Element"
+    },
+    {
+      "iri": "MetadataStandard",
+      "label": "Metadata Standard"
+    },
+    {
+      "iri": "PeriodOfTime",
+      "label": "Period of Time"
+    },
+    {
+      "iri": "Profile",
+      "label": "Profile"
+    },
+    {
+      "iri": "PullRequest",
+      "label": "Pull Request"
+    },
+    {
+      "iri": "Repository",
+      "label": "Repository"
+    },
+    {
+      "iri": "Section",
+      "label": "Section"
+    },
+    {
+      "iri": "Standard",
+      "label": "Standard"
+    },
+    {
+      "iri": "Status",
+      "label": "Status"
+    }
+  ],
+  "edges": [
+    {
+      "source": "AccessRestriction01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Address",
+      "target": "Agent"
+    },
+    {
+      "source": "Address01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Agent",
+      "target": "Agent"
+    },
+    {
+      "source": "Agent01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Attribution",
+      "target": "Agent"
+    },
+    {
+      "source": "Attribution01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Author",
+      "target": "Status"
+    },
+    {
+      "source": "Author01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_1",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_1",
+      "target": "PullRequest"
+    },
+    {
+      "source": "CLAIM_10",
+      "target": "ConformanceRequirement"
+    },
+    {
+      "source": "CLAIM_10",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_11",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_11",
+      "target": "PullRequest"
+    },
+    {
+      "source": "CLAIM_12",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_12",
+      "target": "Implementation"
+    },
+    {
+      "source": "CLAIM_13",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_13",
+      "target": "Profile"
+    },
+    {
+      "source": "CLAIM_14",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_14",
+      "target": "Standard"
+    },
+    {
+      "source": "CLAIM_15",
+      "target": "ConformanceRequirement"
+    },
+    {
+      "source": "CLAIM_15",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_16",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_16",
+      "target": "PullRequest"
+    },
+    {
+      "source": "CLAIM_17",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_17",
+      "target": "Implementation"
+    },
+    {
+      "source": "CLAIM_18",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_18",
+      "target": "Profile"
+    },
+    {
+      "source": "CLAIM_19",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_19",
+      "target": "Standard"
+    },
+    {
+      "source": "CLAIM_2",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_2",
+      "target": "Implementation"
+    },
+    {
+      "source": "CLAIM_20",
+      "target": "ConformanceRequirement"
+    },
+    {
+      "source": "CLAIM_20",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_21",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_21",
+      "target": "PullRequest"
+    },
+    {
+      "source": "CLAIM_22",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_22",
+      "target": "Implementation"
+    },
+    {
+      "source": "CLAIM_23",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_23",
+      "target": "Profile"
+    },
+    {
+      "source": "CLAIM_24",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_24",
+      "target": "Standard"
+    },
+    {
+      "source": "CLAIM_25",
+      "target": "ConformanceRequirement"
+    },
+    {
+      "source": "CLAIM_25",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_26",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_26",
+      "target": "Dataset07"
+    },
+    {
+      "source": "CLAIM_27",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_27",
+      "target": "PublishedDataset07"
+    },
+    {
+      "source": "CLAIM_28",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_28",
+      "target": "DatasetSeries01"
+    },
+    {
+      "source": "CLAIM_29",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_29",
+      "target": "Distribution01"
+    },
+    {
+      "source": "CLAIM_3",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_3",
+      "target": "Profile"
+    },
+    {
+      "source": "CLAIM_30",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_30",
+      "target": "File01"
+    },
+    {
+      "source": "CLAIM_31",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_31",
+      "target": "Organization01"
+    },
+    {
+      "source": "CLAIM_32",
+      "target": "Agent01"
+    },
+    {
+      "source": "CLAIM_32",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_33",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_33",
+      "target": "Identifier01"
+    },
+    {
+      "source": "CLAIM_34",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_34",
+      "target": "License01"
+    },
+    {
+      "source": "CLAIM_35",
+      "target": "AccessRestriction01"
+    },
+    {
+      "source": "CLAIM_35",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_36",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_36",
+      "target": "UseRestriction01"
+    },
+    {
+      "source": "CLAIM_37",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_37",
+      "target": "LiabilityStatement01"
+    },
+    {
+      "source": "CLAIM_38",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_38",
+      "target": "MetadataStandard01"
+    },
+    {
+      "source": "CLAIM_39",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_39",
+      "target": "MetadataElement01"
+    },
+    {
+      "source": "CLAIM_4",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_4",
+      "target": "Standard"
+    },
+    {
+      "source": "CLAIM_40",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_40",
+      "target": "Profile01"
+    },
+    {
+      "source": "CLAIM_41",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_41",
+      "target": "JsonSchema01"
+    },
+    {
+      "source": "CLAIM_42",
+      "target": "ConceptScheme01"
+    },
+    {
+      "source": "CLAIM_42",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_43",
+      "target": "Concept01"
+    },
+    {
+      "source": "CLAIM_43",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_44",
+      "target": "ControlledVocabulary01"
+    },
+    {
+      "source": "CLAIM_44",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_45",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_45",
+      "target": "DataService01"
+    },
+    {
+      "source": "CLAIM_46",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_46",
+      "target": "DataCatalog01"
+    },
+    {
+      "source": "CLAIM_47",
+      "target": "CatalogRecord01"
+    },
+    {
+      "source": "CLAIM_47",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_48",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_48",
+      "target": "MetadataCatalog01"
+    },
+    {
+      "source": "CLAIM_49",
+      "target": "Commit01"
+    },
+    {
+      "source": "CLAIM_49",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_5",
+      "target": "ConformanceRequirement"
+    },
+    {
+      "source": "CLAIM_5",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_50",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_50",
+      "target": "PullRequest01"
+    },
+    {
+      "source": "CLAIM_51",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_51",
+      "target": "Repository01"
+    },
+    {
+      "source": "CLAIM_52",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_52",
+      "target": "Relationship01"
+    },
+    {
+      "source": "CLAIM_53",
+      "target": "Attribution01"
+    },
+    {
+      "source": "CLAIM_53",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_54",
+      "target": "Author01"
+    },
+    {
+      "source": "CLAIM_54",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_55",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_55",
+      "target": "Location01"
+    },
+    {
+      "source": "CLAIM_56",
+      "target": "Address01"
+    },
+    {
+      "source": "CLAIM_56",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_57",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_57",
+      "target": "Kind01"
+    },
+    {
+      "source": "CLAIM_58",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_58",
+      "target": "PeriodOfTime01"
+    },
+    {
+      "source": "CLAIM_59",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_59",
+      "target": "Status01"
+    },
+    {
+      "source": "CLAIM_6",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_6",
+      "target": "PullRequest"
+    },
+    {
+      "source": "CLAIM_60",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_60",
+      "target": "Implementation01"
+    },
+    {
+      "source": "CLAIM_61",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_61",
+      "target": "Theme01"
+    },
+    {
+      "source": "CLAIM_62",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_62",
+      "target": "ThemeTaxonomy01"
+    },
+    {
+      "source": "CLAIM_63",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_63",
+      "target": "Language01"
+    },
+    {
+      "source": "CLAIM_64",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_64",
+      "target": "Rights01"
+    },
+    {
+      "source": "CLAIM_65",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_65",
+      "target": "RightsHolder01"
+    },
+    {
+      "source": "CLAIM_66",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_66",
+      "target": "Publisher01"
+    },
+    {
+      "source": "CLAIM_67",
+      "target": "Creator01"
+    },
+    {
+      "source": "CLAIM_67",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_68",
+      "target": "ContactPoint01"
+    },
+    {
+      "source": "CLAIM_68",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_69",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "CLAIM_69",
+      "target": "Service01"
+    },
+    {
+      "source": "CLAIM_7",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_7",
+      "target": "Implementation"
+    },
+    {
+      "source": "CLAIM_8",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_8",
+      "target": "Profile"
+    },
+    {
+      "source": "CLAIM_9",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "CLAIM_9",
+      "target": "Standard"
+    },
+    {
+      "source": "Catalog",
+      "target": "Agent"
+    },
+    {
+      "source": "Catalog",
+      "target": "CatalogRecord"
+    },
+    {
+      "source": "Catalog",
+      "target": "Concept"
+    },
+    {
+      "source": "Catalog",
+      "target": "ConceptScheme"
+    },
+    {
+      "source": "Catalog",
+      "target": "DataService"
+    },
+    {
+      "source": "Catalog",
+      "target": "Dataset"
+    },
+    {
+      "source": "Catalog",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "Catalog",
+      "target": "Distribution"
+    },
+    {
+      "source": "Catalog",
+      "target": "Identifier"
+    },
+    {
+      "source": "Catalog",
+      "target": "Kind"
+    },
+    {
+      "source": "Catalog",
+      "target": "MetadataCatalog"
+    },
+    {
+      "source": "Catalog",
+      "target": "Standard"
+    },
+    {
+      "source": "CatalogRecord01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Commit",
+      "target": "Author"
+    },
+    {
+      "source": "Commit",
+      "target": "Status"
+    },
+    {
+      "source": "Commit01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Concept",
+      "target": "Agent"
+    },
+    {
+      "source": "Concept",
+      "target": "Document"
+    },
+    {
+      "source": "Concept",
+      "target": "Kind"
+    },
+    {
+      "source": "Concept01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "ConceptScheme01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "ConformanceRequirement",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "ContactPoint01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "ControlledVocabulary01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Creator01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Agent"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Catalog"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "CatalogRecord"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Concept"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "ConceptScheme"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "DataService"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Dataset"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Kind"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Section"
+    },
+    {
+      "source": "DOC_catalog_schema",
+      "target": "Standard"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Agent"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Catalog"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "CatalogRecord"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Commit"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Concept"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "ControlledVocabulary"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "DataService"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Dataset"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Distribution"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Identifier"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "JsonSchema"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Kind"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "MetadataCatalog"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "MetadataElement"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Organization"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "Section"
+    },
+    {
+      "source": "DOC_dataset_schema",
+      "target": "status"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "AGENT_data_governance_team"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "AGENT_federal_data_management_office"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "ATTRIBUTION_data_quality_team"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "CATALOG_RECORD_1"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "CATALOG_budget_subcatalog"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "CATALOG_federal_data_catalog"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "CATALOG_related_agency_catalog"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "CATEGORY_aggregate_catalog"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "DATASERVICE_federal_data_api"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "DATASET_SERIES_federal_budget_data_series"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "DATASET_annual_budget_data"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "DATASET_employment_statistics"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "ID_federal_data_catalog"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "KIND_federal_data_support_center"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "LOCATION_tok_location_10218a7d18c3"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "PERIOD_1"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "STANDARD_dcat_us_3"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "THEME_government_administration"
+    },
+    {
+      "source": "DOC_examples_sample",
+      "target": "THEME_public_services"
+    },
+    {
+      "source": "DOC_pr_120_record",
+      "target": "neilmb"
+    },
+    {
+      "source": "DOC_pr_120_record",
+      "target": "status"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "LICENCE_CC0"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "ORG_1"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_1"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_10"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_100"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_11"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_12"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_13"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_14"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_15"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_16"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_17"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_18"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_19"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_2"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_20"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_21"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_22"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_23"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_24"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_25"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_26"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_27"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_28"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_29"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_3"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_30"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_31"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_32"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_33"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_34"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_35"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_36"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_37"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_38"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_39"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_4"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_40"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_41"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_42"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_43"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_44"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_45"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_46"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_47"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_48"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_49"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_5"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_50"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_51"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_52"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_53"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_54"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_55"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_56"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_57"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_58"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_59"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_6"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_60"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_61"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_62"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_63"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_64"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_65"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_66"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_67"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_68"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_69"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_7"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_70"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_71"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_72"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_73"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_74"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_75"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_76"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_77"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_78"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_79"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_8"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_80"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_81"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_82"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_83"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_84"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_85"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_86"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_87"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_88"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_89"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_9"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_90"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_91"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_92"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_93"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_94"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_95"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_96"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_97"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_98"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "SEC_profile_readme_99"
+    },
+    {
+      "source": "DOC_profile_readme",
+      "target": "https://github.com/GSA/dcat-us/"
+    },
+    {
+      "source": "DataCatalog01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "DataService",
+      "target": "Agent"
+    },
+    {
+      "source": "DataService",
+      "target": "CatalogedResource"
+    },
+    {
+      "source": "DataService",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "DataService",
+      "target": "Distribution"
+    },
+    {
+      "source": "DataService01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Dataset",
+      "target": "Agent"
+    },
+    {
+      "source": "Dataset",
+      "target": "CatalogedResource"
+    },
+    {
+      "source": "Dataset",
+      "target": "Concept"
+    },
+    {
+      "source": "Dataset",
+      "target": "ControlledVocabulary"
+    },
+    {
+      "source": "Dataset",
+      "target": "DataService"
+    },
+    {
+      "source": "Dataset",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "Dataset",
+      "target": "Distribution"
+    },
+    {
+      "source": "Dataset",
+      "target": "Document"
+    },
+    {
+      "source": "Dataset",
+      "target": "Identifier"
+    },
+    {
+      "source": "Dataset",
+      "target": "Implementation"
+    },
+    {
+      "source": "Dataset",
+      "target": "JsonSchema"
+    },
+    {
+      "source": "Dataset",
+      "target": "Kind"
+    },
+    {
+      "source": "Dataset",
+      "target": "MetadataElement"
+    },
+    {
+      "source": "Dataset",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "Dataset07",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "DatasetSeries01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Distribution",
+      "target": "Agent"
+    },
+    {
+      "source": "Distribution",
+      "target": "Concept"
+    },
+    {
+      "source": "Distribution",
+      "target": "ControlledVocabulary"
+    },
+    {
+      "source": "Distribution",
+      "target": "Document"
+    },
+    {
+      "source": "Distribution",
+      "target": "Identifier"
+    },
+    {
+      "source": "Distribution",
+      "target": "Implementation"
+    },
+    {
+      "source": "Distribution",
+      "target": "JsonSchema"
+    },
+    {
+      "source": "Distribution",
+      "target": "Kind"
+    },
+    {
+      "source": "Distribution",
+      "target": "MetadataElement"
+    },
+    {
+      "source": "Distribution",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "Distribution01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Document",
+      "target": "Agent"
+    },
+    {
+      "source": "Document",
+      "target": "Kind"
+    },
+    {
+      "source": "File",
+      "target": "Author"
+    },
+    {
+      "source": "File",
+      "target": "Commit"
+    },
+    {
+      "source": "File",
+      "target": "Repository"
+    },
+    {
+      "source": "File",
+      "target": "Status"
+    },
+    {
+      "source": "File01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Identifier",
+      "target": "Agent"
+    },
+    {
+      "source": "Identifier",
+      "target": "Concept"
+    },
+    {
+      "source": "Identifier",
+      "target": "Document"
+    },
+    {
+      "source": "Identifier",
+      "target": "Kind"
+    },
+    {
+      "source": "Identifier01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Implementation",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "Implementation",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "Implementation01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "JsonSchema",
+      "target": "Implementation"
+    },
+    {
+      "source": "JsonSchema",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "JsonSchema01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Kind",
+      "target": "Agent"
+    },
+    {
+      "source": "Kind01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Language01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "LiabilityStatement01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "License01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Location",
+      "target": "Agent"
+    },
+    {
+      "source": "Location01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "MetadataCatalog",
+      "target": "Author"
+    },
+    {
+      "source": "MetadataCatalog",
+      "target": "Commit"
+    },
+    {
+      "source": "MetadataCatalog",
+      "target": "File"
+    },
+    {
+      "source": "MetadataCatalog",
+      "target": "Repository"
+    },
+    {
+      "source": "MetadataCatalog",
+      "target": "Status"
+    },
+    {
+      "source": "MetadataCatalog01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "MetadataElement",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "MetadataElement01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "MetadataStandard",
+      "target": "Standard"
+    },
+    {
+      "source": "MetadataStandard01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Organization01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "PeriodOfTime",
+      "target": "Agent"
+    },
+    {
+      "source": "PeriodOfTime01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Profile",
+      "target": "Catalog"
+    },
+    {
+      "source": "Profile",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "Profile",
+      "target": "DataService"
+    },
+    {
+      "source": "Profile",
+      "target": "Dataset"
+    },
+    {
+      "source": "Profile",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "Profile",
+      "target": "Distribution"
+    },
+    {
+      "source": "Profile01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "PublishedDataset07",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Publisher01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "PullRequest",
+      "target": "Author"
+    },
+    {
+      "source": "PullRequest",
+      "target": "Commit"
+    },
+    {
+      "source": "PullRequest",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "PullRequest",
+      "target": "File"
+    },
+    {
+      "source": "PullRequest",
+      "target": "MetadataCatalog"
+    },
+    {
+      "source": "PullRequest",
+      "target": "Repository"
+    },
+    {
+      "source": "PullRequest",
+      "target": "Status"
+    },
+    {
+      "source": "PullRequest01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Relationship01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Repository",
+      "target": "Author"
+    },
+    {
+      "source": "Repository",
+      "target": "Commit"
+    },
+    {
+      "source": "Repository",
+      "target": "Status"
+    },
+    {
+      "source": "Repository01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Rights01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "RightsHolder01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_1"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_10"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_100"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_11"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_12"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_13"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_14"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_15"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_16"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_17"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_18"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_19"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_2"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_20"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_21"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_22"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_23"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_24"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_25"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_26"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_27"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_28"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_29"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_3"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_30"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_31"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_32"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_33"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_34"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_35"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_36"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_37"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_38"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_39"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_4"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_40"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_41"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_42"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_43"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_44"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_45"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_46"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_47"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_48"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_49"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_5"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_50"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_51"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_52"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_53"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_54"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_55"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_56"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_57"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_58"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_59"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_6"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_60"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_61"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_62"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_63"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_64"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_65"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_66"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_67"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_68"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_69"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_7"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_70"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_71"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_72"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_73"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_74"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_75"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_76"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_77"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_78"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_79"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_8"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_80"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_81"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_82"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_83"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_84"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_85"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_86"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_87"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_88"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_89"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_9"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_90"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_91"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_92"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_93"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_94"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_95"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_96"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_97"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_98"
+    },
+    {
+      "source": "SEC_w3c_dcat_conformance_4",
+      "target": "SEC_w3c_dcat_conformance_4_99"
+    },
+    {
+      "source": "Service01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Standard",
+      "target": "Agent"
+    },
+    {
+      "source": "Standard",
+      "target": "DOC_dataset_schema"
+    },
+    {
+      "source": "Status01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "Theme01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "ThemeTaxonomy01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "UseRestriction01",
+      "target": "DOC_recovered_context"
+    },
+    {
+      "source": "accessRights",
+      "target": "Catalog"
+    },
+    {
+      "source": "accessRights",
+      "target": "Dataset"
+    },
+    {
+      "source": "accessRights",
+      "target": "string"
+    },
+    {
+      "source": "hasAccessPolicy",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasAccessPolicy",
+      "target": "string"
+    },
+    {
+      "source": "hasAccessProtocol",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasAccessProtocol",
+      "target": "string"
+    },
+    {
+      "source": "hasAccessURL",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasAccessURL",
+      "target": "Document"
+    },
+    {
+      "source": "hasAccessURL",
+      "target": "anyURI"
+    },
+    {
+      "source": "hasAccessURL",
+      "target": "string"
+    },
+    {
+      "source": "hasAgent",
+      "target": "Agent"
+    },
+    {
+      "source": "hasAgent",
+      "target": "Attribution"
+    },
+    {
+      "source": "hasAltLabel",
+      "target": "Concept"
+    },
+    {
+      "source": "hasAuthor",
+      "target": "Author"
+    },
+    {
+      "source": "hasAuthor",
+      "target": "PullRequest"
+    },
+    {
+      "source": "hasByteSize",
+      "target": "Concept"
+    },
+    {
+      "source": "hasByteSize",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasByteSize",
+      "target": "string"
+    },
+    {
+      "source": "hasCatalog",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasCategory",
+      "target": "Concept"
+    },
+    {
+      "source": "hasCategory",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasCharacterEncoding",
+      "target": "Concept"
+    },
+    {
+      "source": "hasCharacterEncoding",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasCommit",
+      "target": "Commit"
+    },
+    {
+      "source": "hasCommit",
+      "target": "Repository"
+    },
+    {
+      "source": "hasConformsTo",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasConformsTo",
+      "target": "Standard"
+    },
+    {
+      "source": "hasContactPoint",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasContactPoint",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasContactPoint",
+      "target": "Kind"
+    },
+    {
+      "source": "hasControlledVocabulary",
+      "target": "Profile"
+    },
+    {
+      "source": "hasControlledVocabulary",
+      "target": "string"
+    },
+    {
+      "source": "hasCountryName",
+      "target": "Address"
+    },
+    {
+      "source": "hasCountryName",
+      "target": "string"
+    },
+    {
+      "source": "hasCreator",
+      "target": "Agent"
+    },
+    {
+      "source": "hasCreator",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasCreator",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasDataService",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasDataService",
+      "target": "DataService"
+    },
+    {
+      "source": "hasDataset",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasDataset",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasDatasetSeries",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasDatasetSeries",
+      "target": "DatasetSeries"
+    },
+    {
+      "source": "hasDescription",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasDescription",
+      "target": "Concept"
+    },
+    {
+      "source": "hasDescription",
+      "target": "Document"
+    },
+    {
+      "source": "hasDescription",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "hasDescription",
+      "target": "string"
+    },
+    {
+      "source": "hasDistribution",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasDistribution",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasDownloadURL",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasDownloadURL",
+      "target": "Document"
+    },
+    {
+      "source": "hasDownloadURL",
+      "target": "string"
+    },
+    {
+      "source": "hasEmail",
+      "target": "Kind"
+    },
+    {
+      "source": "hasEmail",
+      "target": "string"
+    },
+    {
+      "source": "hasFN",
+      "target": "Kind"
+    },
+    {
+      "source": "hasFN",
+      "target": "string"
+    },
+    {
+      "source": "hasFormat",
+      "target": "Concept"
+    },
+    {
+      "source": "hasFormat",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasFormat",
+      "target": "string"
+    },
+    {
+      "source": "hasHasPart",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasIdentifier",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasIdentifier",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasIdentifier",
+      "target": "Identifier"
+    },
+    {
+      "source": "hasIdentifier",
+      "target": "string"
+    },
+    {
+      "source": "hasIssued",
+      "target": "Concept"
+    },
+    {
+      "source": "hasIssued",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasJsonSchema",
+      "target": "JsonSchema"
+    },
+    {
+      "source": "hasJsonSchema",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "hasLanguage",
+      "target": "Concept"
+    },
+    {
+      "source": "hasLanguage",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasLicense",
+      "target": "Concept"
+    },
+    {
+      "source": "hasLicense",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasLicense",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "hasLicense",
+      "target": "string"
+    },
+    {
+      "source": "hasLocality",
+      "target": "Address"
+    },
+    {
+      "source": "hasLocality",
+      "target": "string"
+    },
+    {
+      "source": "hasMedia",
+      "target": "Concept"
+    },
+    {
+      "source": "hasMedia",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasMediaType",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasMediaType",
+      "target": "string"
+    },
+    {
+      "source": "hasMetadata",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasMetadata",
+      "target": "string"
+    },
+    {
+      "source": "hasMetadataCatalog",
+      "target": "Author"
+    },
+    {
+      "source": "hasMetadataCatalog",
+      "target": "MetadataCatalog"
+    },
+    {
+      "source": "hasMetadataElement",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasMetadataElement",
+      "target": "MetadataElement"
+    },
+    {
+      "source": "hasModified",
+      "target": "Concept"
+    },
+    {
+      "source": "hasModified",
+      "target": "Distribution"
+    },
+    {
+      "source": "hasName",
+      "target": "Agent"
+    },
+    {
+      "source": "hasName",
+      "target": "string"
+    },
+    {
+      "source": "hasNotation",
+      "target": "Concept"
+    },
+    {
+      "source": "hasNotation",
+      "target": "Identifier"
+    },
+    {
+      "source": "hasOrganizationName",
+      "target": "Kind"
+    },
+    {
+      "source": "hasOrganizationName",
+      "target": "string"
+    },
+    {
+      "source": "hasOtherIdentifier",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasOtherIdentifier",
+      "target": "Identifier"
+    },
+    {
+      "source": "hasPart",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasPostalCode",
+      "target": "Address"
+    },
+    {
+      "source": "hasPostalCode",
+      "target": "string"
+    },
+    {
+      "source": "hasPrefLabel",
+      "target": "Concept"
+    },
+    {
+      "source": "hasPrimaryTopic",
+      "target": "CatalogRecord"
+    },
+    {
+      "source": "hasPrimaryTopic",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasPublisher",
+      "target": "Agent"
+    },
+    {
+      "source": "hasPublisher",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasPublisher",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasQualifiedAttribution",
+      "target": "Attribution"
+    },
+    {
+      "source": "hasQualifiedAttribution",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasRDFDescription",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasRDFDescription",
+      "target": "string"
+    },
+    {
+      "source": "hasRDFSyntax",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasRDFSyntax",
+      "target": "string"
+    },
+    {
+      "source": "hasRecord",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasRecord",
+      "target": "CatalogRecord"
+    },
+    {
+      "source": "hasRegion",
+      "target": "Address"
+    },
+    {
+      "source": "hasRegion",
+      "target": "string"
+    },
+    {
+      "source": "hasRequiredField",
+      "target": "Profile"
+    },
+    {
+      "source": "hasRequiredField",
+      "target": "string"
+    },
+    {
+      "source": "hasRights",
+      "target": "Concept"
+    },
+    {
+      "source": "hasRights",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasSection",
+      "target": "Document"
+    },
+    {
+      "source": "hasSection",
+      "target": "Section"
+    },
+    {
+      "source": "hasSectionNumber",
+      "target": "Section"
+    },
+    {
+      "source": "hasSectionNumber",
+      "target": "string"
+    },
+    {
+      "source": "hasService",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasService",
+      "target": "DataService"
+    },
+    {
+      "source": "hasSpatial",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasSpatial",
+      "target": "Location"
+    },
+    {
+      "source": "hasStatus",
+      "target": "File"
+    },
+    {
+      "source": "hasStatus",
+      "target": "Status"
+    },
+    {
+      "source": "hasStreetAddress",
+      "target": "Address"
+    },
+    {
+      "source": "hasStreetAddress",
+      "target": "string"
+    },
+    {
+      "source": "hasTemporal",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasTemporal",
+      "target": "PeriodOfTime"
+    },
+    {
+      "source": "hasTheme",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasTheme",
+      "target": "Concept"
+    },
+    {
+      "source": "hasTheme",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasThemeTaxonomy",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasThemeTaxonomy",
+      "target": "ConceptScheme"
+    },
+    {
+      "source": "hasTitle",
+      "target": "Catalog"
+    },
+    {
+      "source": "hasTitle",
+      "target": "Concept"
+    },
+    {
+      "source": "hasTitle",
+      "target": "Document"
+    },
+    {
+      "source": "hasTitle",
+      "target": "string"
+    },
+    {
+      "source": "hasVersion",
+      "target": "Concept"
+    },
+    {
+      "source": "hasVersion",
+      "target": "Dataset"
+    },
+    {
+      "source": "hasVersion",
+      "target": "Identifier"
+    },
+    {
+      "source": "hasVersion",
+      "target": "MetadataStandard"
+    },
+    {
+      "source": "hasVersion",
+      "target": "string"
+    },
+    {
+      "source": "liabilityStatement",
+      "target": "Dataset"
+    },
+    {
+      "source": "liabilityStatement",
+      "target": "string"
+    },
+    {
+      "source": "purpose",
+      "target": "Dataset"
+    },
+    {
+      "source": "purpose",
+      "target": "string"
+    },
+    {
+      "source": "versionNotes",
+      "target": "Dataset"
+    },
+    {
+      "source": "versionNotes",
+      "target": "string"
+    }
+  ],
+  "properties": [
+    {
+      "iri": "accessRights",
+      "label": "access rights"
+    },
+    {
+      "iri": "hasAccessPolicy",
+      "label": "has access policy"
+    },
+    {
+      "iri": "hasAccessProtocol",
+      "label": "has access protocol"
+    },
+    {
+      "iri": "hasAccessURL",
+      "label": "has access URL"
+    },
+    {
+      "iri": "hasAgent",
+      "label": "has agent"
+    },
+    {
+      "iri": "hasAltLabel",
+      "label": "has alt label"
+    },
+    {
+      "iri": "hasAuthor",
+      "label": "has author"
+    },
+    {
+      "iri": "hasByteSize",
+      "label": "has byte size"
+    },
+    {
+      "iri": "hasCatalog",
+      "label": "has catalog"
+    },
+    {
+      "iri": "hasCategory",
+      "label": "has category"
+    },
+    {
+      "iri": "hasCharacterEncoding",
+      "label": "has character encoding"
+    },
+    {
+      "iri": "hasCommit",
+      "label": "has commit"
+    },
+    {
+      "iri": "hasConformsTo",
+      "label": "has conforms to"
+    },
+    {
+      "iri": "hasContactPoint",
+      "label": "has contact point"
+    },
+    {
+      "iri": "hasControlledVocabulary",
+      "label": "has controlled vocabulary"
+    },
+    {
+      "iri": "hasCountryName",
+      "label": "has country name"
+    },
+    {
+      "iri": "hasCreator",
+      "label": "has creator"
+    },
+    {
+      "iri": "hasDataService",
+      "label": "has data service"
+    },
+    {
+      "iri": "hasDataset",
+      "label": "has dataset"
+    },
+    {
+      "iri": "hasDatasetSeries",
+      "label": "has dataset series"
+    },
+    {
+      "iri": "hasDescription",
+      "label": "has description"
+    },
+    {
+      "iri": "hasDistribution",
+      "label": "has distribution"
+    },
+    {
+      "iri": "hasDownloadURL",
+      "label": "has download URL"
+    },
+    {
+      "iri": "hasEmail",
+      "label": "has email"
+    },
+    {
+      "iri": "hasFN",
+      "label": "has FN"
+    },
+    {
+      "iri": "hasFormat",
+      "label": "has format"
+    },
+    {
+      "iri": "hasHasPart",
+      "label": "has part"
+    },
+    {
+      "iri": "hasIdentifier",
+      "label": "has identifier"
+    },
+    {
+      "iri": "hasIssued",
+      "label": "has issued"
+    },
+    {
+      "iri": "hasJsonSchema",
+      "label": "has JSON schema"
+    },
+    {
+      "iri": "hasLanguage",
+      "label": "has language"
+    },
+    {
+      "iri": "hasLicense",
+      "label": "has license"
+    },
+    {
+      "iri": "hasLocality",
+      "label": "has locality"
+    },
+    {
+      "iri": "hasMedia",
+      "label": "has media type"
+    },
+    {
+      "iri": "hasMediaType",
+      "label": "has media type"
+    },
+    {
+      "iri": "hasMetadata",
+      "label": "has metadata"
+    },
+    {
+      "iri": "hasMetadataCatalog",
+      "label": "has metadata catalog"
+    },
+    {
+      "iri": "hasMetadataElement",
+      "label": "has metadata element"
+    },
+    {
+      "iri": "hasModified",
+      "label": "has modified"
+    },
+    {
+      "iri": "hasName",
+      "label": "has name"
+    },
+    {
+      "iri": "hasNotation",
+      "label": "has notation"
+    },
+    {
+      "iri": "hasOrganizationName",
+      "label": "has organization name"
+    },
+    {
+      "iri": "hasOtherIdentifier",
+      "label": "has other identifier"
+    },
+    {
+      "iri": "hasPart",
+      "label": "has part"
+    },
+    {
+      "iri": "hasPostalCode",
+      "label": "has postal code"
+    },
+    {
+      "iri": "hasPrefLabel",
+      "label": "has pref label"
+    },
+    {
+      "iri": "hasPrimaryTopic",
+      "label": "has primary topic"
+    },
+    {
+      "iri": "hasPublisher",
+      "label": "has publisher"
+    },
+    {
+      "iri": "hasQualifiedAttribution",
+      "label": "has qualified attribution"
+    },
+    {
+      "iri": "hasRDFDescription",
+      "label": "has RDF description"
+    },
+    {
+      "iri": "hasRDFSyntax",
+      "label": "has RDF syntax"
+    },
+    {
+      "iri": "hasRecord",
+      "label": "has record"
+    },
+    {
+      "iri": "hasRegion",
+      "label": "has region"
+    },
+    {
+      "iri": "hasRequiredField",
+      "label": "has required field"
+    },
+    {
+      "iri": "hasRights",
+      "label": "has rights"
+    },
+    {
+      "iri": "hasSection",
+      "label": "has section"
+    },
+    {
+      "iri": "hasSectionNumber",
+      "label": "has section number"
+    },
+    {
+      "iri": "hasService",
+      "label": "has service"
+    },
+    {
+      "iri": "hasSpatial",
+      "label": "has spatial"
+    },
+    {
+      "iri": "hasStatus",
+      "label": "has status"
+    },
+    {
+      "iri": "hasStreetAddress",
+      "label": "has street address"
+    },
+    {
+      "iri": "hasTemporal",
+      "label": "has temporal"
+    },
+    {
+      "iri": "hasTheme",
+      "label": "has theme"
+    },
+    {
+      "iri": "hasThemeTaxonomy",
+      "label": "has theme taxonomy"
+    },
+    {
+      "iri": "hasTitle",
+      "label": "has title"
+    },
+    {
+      "iri": "hasVersion",
+      "label": "has version"
+    },
+    {
+      "iri": "liabilityStatement",
+      "label": "liability statement"
+    },
+    {
+      "iri": "purpose",
+      "label": "purpose"
+    },
+    {
+      "iri": "versionNotes",
+      "label": "version notes"
+    }
+  ]
+}
