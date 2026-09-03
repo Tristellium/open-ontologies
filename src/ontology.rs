@@ -189,8 +189,18 @@ impl OntologyService {
     /// Lint an ontology with feedback-based suppression.
     pub fn lint_with_feedback(content: &str, db: Option<&crate::state::StateDb>) -> anyhow::Result<String> {
         let store = Store::new()?;
+        // Sniff the serialisation from content instead of assuming Turtle
+        // (F-025 tranche-1 item 4). `validate`/`load_file` have always done
+        // this; `lint` handed every document straight to a Turtle parser, so
+        // an RDF/XML ontology (the norm for OBO Foundry and much of the
+        // shelf) died on line 1 with a parse error from the wrong parser,
+        // reachable via `onto_lint` and any other caller of this function
+        // that does not pre-convert (the CLI `lint` subcommand grew its own
+        // such workaround upstream; this closes the same gap at its root so
+        // every caller benefits, not just that one).
+        let format = GraphStore::detect_format_sniffed("", content);
         let reader = Cursor::new(content.as_bytes());
-        for quad in RdfParser::from_format(RdfFormat::Turtle).for_reader(reader) {
+        for quad in RdfParser::from_format(format).for_reader(reader) {
             store.insert(&quad?)?;
         }
 
@@ -287,5 +297,86 @@ impl OntologyService {
             "label": label,
             "triples_restored": count,
         }).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const RDFXML: &str = r#"<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+  <owl:Ontology rdf:about="http://ex.org/o"/>
+  <owl:Class rdf:about="http://ex.org/o#Parent"/>
+  <owl:Class rdf:about="http://ex.org/o#Child">
+    <rdfs:subClassOf rdf:resource="http://ex.org/o#Parent"/>
+  </owl:Class>
+</rdf:RDF>
+"#;
+
+    // ─── F-025 tranche-1 item 4: `lint` hardcodes Turtle ───────────────────
+    //
+    // `OntologyService::lint`/`lint_with_feedback` is the function behind
+    // BOTH `onto_lint` (server.rs) and, indirectly, the CLI `lint`
+    // subcommand. The CLI grew its own pre-conversion workaround upstream
+    // (`GraphStore::content_as_turtle`, called in `main.rs` before this
+    // function ever sees the content) -- but `onto_lint` and any other
+    // caller that hands this function raw content still hit the hardcoded
+    // Turtle parser directly. This proves the root-cause fix: the function
+    // itself must sniff format, not rely on every caller to pre-convert.
+
+    #[test]
+    fn lint_reads_rdfxml_directly_without_a_caller_side_conversion() {
+        // Calls `lint`, not a CLI wrapper: this is the exact call `onto_lint`
+        // (server.rs) makes, unmediated by main.rs's `content_as_turtle`
+        // workaround.
+        let result = OntologyService::lint(RDFXML)
+            .expect("lint must not error on RDF/XML content");
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert!(
+            parsed.get("issue_count").is_some(),
+            "expected a lint report, got: {result}"
+        );
+    }
+
+    #[test]
+    fn lint_on_rdfxml_actually_read_the_classes() {
+        // A defect this function had before: a Turtle parser handed RDF/XML
+        // bytes can fail to parse -- but a fallback string is also a
+        // technically-valid empty Turtle document, so a naive fix could
+        // report `issue_count: 0` over a file it never read. Assert real
+        // content was seen, not just that nothing errored.
+        let result = OntologyService::lint(RDFXML).unwrap();
+        assert!(
+            result.contains("ex.org/o#Child") || result.contains("ex.org/o#Parent"),
+            "lint parsed something but saw none of the RDF/XML file's classes: {result}"
+        );
+    }
+
+    #[test]
+    fn lint_with_feedback_also_reads_rdfxml() {
+        // `lint_with_feedback(content, None)` is exactly what `lint` calls,
+        // but this pins the two-argument entry point directly (also what
+        // `onto_lint` calls with `Some(&self.db)`).
+        let result = OntologyService::lint_with_feedback(RDFXML, None)
+            .expect("lint_with_feedback must not error on RDF/XML content");
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert!(parsed.get("issue_count").is_some());
+    }
+
+    #[test]
+    fn lint_still_reads_turtle_unchanged() {
+        // Non-regression: plain Turtle content (no sniffable RDF/XML or
+        // JSON-LD signal) must still parse as Turtle exactly as before.
+        let ttl = r#"
+            @prefix owl: <http://www.w3.org/2002/07/owl#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            <http://ex.org/o#Parent> a owl:Class .
+            <http://ex.org/o#Child> a owl:Class ; rdfs:subClassOf <http://ex.org/o#Parent> .
+        "#;
+        let result = OntologyService::lint(ttl).expect("Turtle must still lint cleanly");
+        assert!(result.contains("ex.org/o#Child") || result.contains("issue_count"));
     }
 }

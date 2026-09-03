@@ -102,6 +102,65 @@ fn resolve_binary(binary_override: Option<&str>) -> String {
     "fast-downward.py".to_string()
 }
 
+/// Default wall-clock budget for a single Fast Downward invocation.
+/// Overridable via `FAST_DOWNWARD_TIMEOUT_SECS`. Defense in depth: this
+/// module's `.output()` call previously blocked unbounded on a runaway or
+/// stuck solver process, mirroring the same "no ceiling on an external
+/// process" shape as the model-download hang (F-034). `onto_plan_classical`
+/// (the only current caller) is WORD_GATED in the driver today, so this
+/// path isn't reachable through the gate yet — this bounds a standing trap
+/// for whenever that changes, or for any future non-gated caller of this
+/// module.
+const DEFAULT_FAST_DOWNWARD_TIMEOUT_SECS: u64 = 600;
+
+/// Resolve the wall-clock budget, honouring `FAST_DOWNWARD_TIMEOUT_SECS`.
+fn resolve_timeout() -> std::time::Duration {
+    std::env::var("FAST_DOWNWARD_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|&secs| secs > 0)
+        .map(std::time::Duration::from_secs)
+        .unwrap_or(std::time::Duration::from_secs(
+            DEFAULT_FAST_DOWNWARD_TIMEOUT_SECS,
+        ))
+}
+
+/// Run a spawned child to completion, killing it if it exceeds `timeout`.
+///
+/// Polls non-blockingly via `try_wait` (instead of blocking in `wait`) so
+/// this thread can enforce the deadline itself. Once `try_wait` observes
+/// exit — or we've killed and reaped a runaway child — `std::process::Child`
+/// caches the exit status internally, so the follow-up `wait_with_output`
+/// call (needed to drain stdout/stderr) cannot block: no further writes can
+/// occur once the process has already exited.
+fn wait_with_timeout(
+    mut child: std::process::Child,
+    timeout: std::time::Duration,
+) -> anyhow::Result<std::process::Output> {
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_status)) => {
+                return child.wait_with_output().map_err(|e| {
+                    anyhow::anyhow!("Failed to collect subprocess output: {}", e)
+                });
+            }
+            Ok(None) => {
+                if start.elapsed() >= timeout {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    anyhow::bail!(
+                        "timed_out: Fast Downward exceeded the {:?} wall-clock budget and was killed",
+                        timeout
+                    );
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            Err(e) => anyhow::bail!("Failed to poll subprocess status: {}", e),
+        }
+    }
+}
+
 /// Invoke Fast Downward on a domain + problem and return the parsed plan.
 ///
 /// `search` is the Fast Downward search-engine string (e.g.
@@ -133,16 +192,19 @@ pub fn run_fast_downward(
     // Fast Downward CLI: `fast-downward.py [--plan-file FILE] DOMAIN PROBLEM
     // --search SEARCH`. We force the plan file so we can reliably read it.
     let plan_path = tmp_root.join("sas_plan");
-    let output = Command::new(&binary)
+    let child = Command::new(&binary)
         .arg("--plan-file")
         .arg(&plan_path)
         .arg(&domain_path)
         .arg(&problem_path)
         .arg("--search")
         .arg(&search_str)
-        .output();
-    let output = match output {
-        Ok(o) => o,
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn();
+    let child = match child {
+        Ok(c) => c,
         Err(e) => {
             anyhow::bail!(
                 "binary_unavailable: failed to execute `{}`: {}. Install Fast Downward and set FAST_DOWNWARD_BIN, or pass `fast_downward_bin`.",
@@ -151,6 +213,7 @@ pub fn run_fast_downward(
             );
         }
     };
+    let output = wait_with_timeout(child, resolve_timeout())?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

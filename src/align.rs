@@ -299,8 +299,23 @@ impl AlignmentEngine {
                 let union = tokens_a.union(&tokens_b).count() as f64;
                 let jaccard = if union > 0.0 { intersection / union } else { 0.0 };
 
-                // Take the best of Jaro-Winkler and token Jaccard
-                let sim = jw.max(jaccard);
+                // Word-order-invariant Jaro-Winkler: sort each side's tokens
+                // alphabetically before comparing (F-025 tranche-1 item 2's
+                // "revisit the 0.75 label gate + prefix-biased
+                // Jaro-Winkler"). Plain Jaro-Winkler's prefix bonus rewards
+                // a shared PREFIX, so reordering two labels' otherwise
+                // identical (or near-identical) tokens can crater the raw
+                // score -- and token Jaccard doesn't rescue it when the
+                // tokens also differ morphologically (singular/plural,
+                // tense), which real label variance does constantly.
+                // Sorting cancels word order while still letting
+                // Jaro-Winkler's character-level matching catch
+                // near-identical tokens Jaccard's exact-match test misses.
+                let jw_sorted = jaro_winkler(&sort_tokens(&na), &sort_tokens(&nb));
+
+                // Take the best of Jaro-Winkler, token Jaccard, and
+                // order-invariant Jaro-Winkler.
+                let sim = jw.max(jaccard).max(jw_sorted);
                 best = best.max(sim);
             }
         }
@@ -534,20 +549,11 @@ impl AlignmentEngine {
                 // lexical/semantic signal with a penalty rather than the weighted
                 // sum (which would be ~0.25 * label_sim and too low to pass any
                 // threshold).
-                let structural_sum: f64 = signals[1..6].iter().sum();
-                let confidence: f64 = if structural_sum == 0.0 {
-                    // No structural evidence: apply a 15% penalty to the best
-                    // available signal. With embeddings this lets a strong
-                    // cross-lingual embedding match still surface (typically as a
-                    // borderline candidate for review).
-                    #[cfg(feature = "embeddings")]
-                    let best_signal = label_sim.max(embedding_sim);
-                    #[cfg(not(feature = "embeddings"))]
-                    let best_signal = label_sim;
-                    best_signal * 0.85
-                } else {
-                    signals.iter().zip(weights.iter()).map(|(s, w)| s * w).sum()
-                };
+                #[cfg(feature = "embeddings")]
+                let best_signal = label_sim.max(embedding_sim);
+                #[cfg(not(feature = "embeddings"))]
+                let best_signal = label_sim;
+                let confidence: f64 = Self::fuse_confidence(&signals, &weights, best_signal);
 
                 // Drop pairs below the low threshold entirely (for RRF, this is
                 // f64::NEG_INFINITY — we keep all label-prefiltered candidates and apply
@@ -785,6 +791,58 @@ impl AlignmentEngine {
         }
     }
 
+    /// Fuse per-signal scores into one confidence value.
+    ///
+    /// `signals` and `weights` are the parallel per-signal-name arrays built
+    /// at each call site (6 without the `embeddings` feature, 7 with it --
+    /// see `DEFAULT_WEIGHTS`); `signals[1..6]` is always the five
+    /// structural slots (property/parent/instance/restriction/neighborhood)
+    /// regardless of which variant is active, since the embeddings variant
+    /// only appends a 7th (embedding) slot at the end.
+    ///
+    /// When no structural evidence is present at all, falls back to the
+    /// best available signal (label or, with embeddings, label-or-embedding)
+    /// with a 15% penalty -- a weighted sum here would be dominated by
+    /// weight mass no signal actually spent (~0.25 * label_sim) and too low
+    /// to clear any real threshold.
+    ///
+    /// Otherwise takes a weighted AVERAGE over the signals that are
+    /// actually PRESENT (nonzero), renormalizing the weight mass rather
+    /// than summing unconditionally over the full fixed weight vector. The
+    /// un-renormalized sum double-penalizes: every absent signal (an
+    /// unpopulated embedding vector, a class with no declared instances,
+    /// ...) forfeits its full weight from the numerator AND still shrinks
+    /// the achievable ceiling by that same amount -- so corroborating
+    /// evidence could make a match's score go DOWN (F-025 tranche-1 item
+    /// 2: a perfect label-only match at 0.700 dropped to 0.285 once a
+    /// correct parent-overlap signal was added), and a full-feature build
+    /// could never reach the 0.85 auto-apply default even with every live
+    /// signal perfect (capped at 0.80 -- the dead embedding signal's
+    /// un-renormalized 0.20, see F-025 tranche-1 item 1). Renormalizing
+    /// over present signals keeps the fusion a genuine weighted average:
+    /// adding a signal at or above the current average can only raise it,
+    /// never silently discard weight mass for evidence that was never
+    /// measured.
+    fn fuse_confidence(signals: &[f64], weights: &[f64], best_signal: f64) -> f64 {
+        let structural_sum: f64 = signals[1..6].iter().sum();
+        if structural_sum == 0.0 {
+            return best_signal * 0.85;
+        }
+        let mut weighted = 0.0_f64;
+        let mut present_mass = 0.0_f64;
+        for (s, w) in signals.iter().zip(weights.iter()) {
+            if *s > 0.0 {
+                weighted += s * w;
+                present_mass += w;
+            }
+        }
+        if present_mass > 0.0 {
+            weighted / present_mass
+        } else {
+            0.0
+        }
+    }
+
     /// Classify the relation type based on signal strengths.
     fn classify_relation(label_sim: f64, prop_overlap: f64, parent_overlap: f64) -> &'static str {
         // The strength of the claim must track the strength of the evidence.
@@ -1010,6 +1068,15 @@ fn normalize_label(label: &str) -> String {
     }
     // Collapse multiple spaces and lowercase
     result.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Sort a normalized label's whitespace-separated tokens alphabetically,
+/// canceling word order before a Jaro-Winkler comparison. See
+/// `label_similarity`'s use of this (F-025 tranche-1 item 2).
+fn sort_tokens(s: &str) -> String {
+    let mut tokens: Vec<&str> = s.split_whitespace().collect();
+    tokens.sort_unstable();
+    tokens.join(" ")
 }
 
 #[cfg(test)]
@@ -1282,5 +1349,146 @@ mod tests {
         // A middling name with no structural support must not claim exactness.
         assert_eq!(AlignmentEngine::classify_relation(0.7, 0.1, 0.1), "skos:closeMatch");
         assert_eq!(AlignmentEngine::classify_relation(0.61, 0.0, 0.0), "skos:closeMatch");
+    }
+
+    // ─── F-025 tranche-1 item 2: weight-normalization bug ─────────────────
+    //
+    // The weighted-sum branch sums `signal * weight` unconditionally over
+    // the FULL fixed weight vector, never renormalizing over the signals
+    // actually present. Every absent signal (an unpopulated embedding
+    // vector, a class with no declared instances, ...) forfeits its full
+    // weight from the numerator while the achievable ceiling still shrinks
+    // by that same amount -- so corroborating evidence can make a match's
+    // score go DOWN, and a full-feature build can never reach the 0.85
+    // auto-apply default even with every live signal perfect (the dead
+    // embedding weight, see item 1, caps the sum at 0.80). Numbers below
+    // are the controlled-experiment figures from the F-025 tranche-1
+    // report, measured on the released v1.2.0 full-feature binary
+    // (embeddings compiled, no vectors stored).
+
+    #[cfg(feature = "embeddings")]
+    #[test]
+    fn fuse_confidence_reaches_the_1_0_ceiling_when_every_present_signal_is_perfect() {
+        // Full-feature (7-signal) weight vector; every live signal perfect,
+        // only the embedding slot absent (no vecstore data -- 0.0, not
+        // merely low). Structural evidence is present (prop/parent/etc. are
+        // nonzero) so this takes the weighted-sum branch, not the
+        // zero-structural fallback.
+        let signals = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0];
+        let weights = AlignmentEngine::DEFAULT_WEIGHTS;
+        let confidence = AlignmentEngine::fuse_confidence(&signals, &weights, 1.0);
+        assert!(
+            (confidence - 1.0).abs() < 1e-9,
+            "every PRESENT signal is perfect; renormalizing over present \
+             signals must reach the 1.0 ceiling, not the un-renormalized \
+             0.80 the dead embedding weight used to cap it at: {confidence}"
+        );
+    }
+
+    #[cfg(feature = "embeddings")]
+    #[test]
+    fn fuse_confidence_raises_a_label_only_match_when_parent_overlap_corroborates() {
+        // label_sim ~=0.824 (the exact figure measured in the F-025
+        // tranche-1 controlled experiment); no structural evidence at all
+        // takes the zero-structural fallback: best_signal * 0.85 ~= 0.700.
+        let label_sim = 0.824;
+        let weights = AlignmentEngine::DEFAULT_WEIGHTS;
+        let no_structural_evidence = [label_sim, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let baseline = AlignmentEngine::fuse_confidence(&no_structural_evidence, &weights, label_sim);
+        assert!(
+            (baseline - 0.700).abs() < 0.001,
+            "baseline (label only, zero-structural fallback) should be ~0.700: {baseline}"
+        );
+
+        // Add a CORRECT, perfect parent_overlap signal (index 2). Pre-fix
+        // this took the un-renormalized weighted-sum branch and DROPPED to
+        // 0.285 (0.824*0.20 + 1.0*0.12) -- corroborating evidence made the
+        // match look worse. Renormalizing over present signals must RAISE
+        // it instead.
+        let with_parent_corroboration = [label_sim, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
+        let corroborated =
+            AlignmentEngine::fuse_confidence(&with_parent_corroboration, &weights, label_sim);
+        assert!(
+            corroborated > 0.700,
+            "a corroborating parent-overlap signal must RAISE a 0.700 match, \
+             not drop it to 0.285: got {corroborated}"
+        );
+        // Renormalized: (0.824*0.20 + 1.0*0.12) / (0.20 + 0.12) = 0.89.
+        assert!(
+            (corroborated - 0.89).abs() < 0.01,
+            "expected the renormalized weighted average (~0.89): got {corroborated}"
+        );
+    }
+
+    // ─── F-025 tranche-1 item 2 (revisit): the 0.75 label gate + ──────────
+    // ─── prefix-biased Jaro-Winkler ────────────────────────────────────────
+    //
+    // Plain Jaro-Winkler's prefix bonus rewards a shared PREFIX. Two class
+    // labels with the same (or near-identical) tokens in a different order
+    // share no prefix, so the raw score can collapse even though the
+    // labels mean the same thing -- and token-Jaccard doesn't rescue it
+    // when the tokens also differ morphologically (singular/plural,
+    // tense), which real-world label variance does constantly. Word order
+    // alone can therefore flip a comfortably-passing label match to one
+    // silently dropped by the 0.75 pre-filter gate -- not merely
+    // lower-scoring, ABSENT from the candidate list entirely.
+
+    #[test]
+    fn label_similarity_is_word_order_invariant() {
+        let a = ClassInfo {
+            iri: "http://ex.org/TestingScenarios".into(),
+            labels: vec![crate::language::Label::new("Testing Scenarios", None)],
+        };
+        // Same tokens, singular "Test": clears the gate comfortably today
+        // (~0.906-0.91 measured; not itself the defect).
+        let ordered = ClassInfo {
+            iri: "http://other.org/TestScenarios".into(),
+            labels: vec![crate::language::Label::new("Test Scenarios", None)],
+        };
+        // Same two ideas, reordered AND singularized both ways: raw
+        // Jaro-Winkler collapses (no shared prefix) and token-Jaccard is
+        // 0.0 (no exact token overlap between {testing,scenarios} and
+        // {scenario,test}) -- pre-fix this pair silently vanishes from
+        // alignment output.
+        let reordered = ClassInfo {
+            iri: "http://other.org/ScenarioTest".into(),
+            labels: vec![crate::language::Label::new("Scenario Test", None)],
+        };
+
+        let baseline = AlignmentEngine::label_similarity(&a, &ordered);
+        let flipped = AlignmentEngine::label_similarity(&a, &reordered);
+
+        const LABEL_GATE: f64 = 0.75;
+        assert!(
+            baseline > LABEL_GATE,
+            "sanity: the un-reordered near-duplicate should already clear \
+             the gate: {baseline}"
+        );
+        assert!(
+            flipped > LABEL_GATE,
+            "word order alone must not drop a near-duplicate label below \
+             the 0.75 pre-filter gate (silently removing it from \
+             candidates, not merely scoring it lower): {flipped}"
+        );
+    }
+
+    #[test]
+    fn label_similarity_permutation_of_identical_tokens_scores_identically() {
+        // A pure word-order permutation (same tokens, same multiset) must
+        // score the same regardless of which order either label happens to
+        // use -- order-invariance, not merely "not too low".
+        let a = ClassInfo {
+            iri: "http://ex.org/A".into(),
+            labels: vec![crate::language::Label::new("Integration Testing Scenarios", None)],
+        };
+        let b = ClassInfo {
+            iri: "http://other.org/B".into(),
+            labels: vec![crate::language::Label::new("Scenarios Testing Integration", None)],
+        };
+        let sim = AlignmentEngine::label_similarity(&a, &b);
+        assert!(
+            (sim - 1.0).abs() < 1e-9,
+            "identical tokens in a different order must score 1.0: {sim}"
+        );
     }
 }

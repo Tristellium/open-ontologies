@@ -3,6 +3,7 @@
 
 use anyhow::{Context, Result};
 use std::path::Path;
+use std::time::Duration;
 use tokenizers::Tokenizer;
 use tract_onnx::prelude::*;
 
@@ -266,8 +267,22 @@ impl TextEmbedderProvider {
 }
 
 /// Download a file from URL to a local path.
+///
+/// `reqwest::Client::new()` carries no total-request timeout, so against a
+/// blackholing or throttling network this waits indefinitely — a
+/// contributor to unbounded `init` hangs when fetching the ~470MB default
+/// model (F-034). `DOWNLOAD_TIMEOUT` bounds the whole request (generous,
+/// since a 470MB pull over a slow link is legitimate); `CONNECT_TIMEOUT`
+/// bounds only the initial TCP/TLS handshake, which should never
+/// legitimately take long.
 pub async fn download_model_file(url: &str, dest: &Path) -> Result<()> {
-    let client = reqwest::Client::new();
+    const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
+    const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+    let client = reqwest::Client::builder()
+        .timeout(DOWNLOAD_TIMEOUT)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .build()
+        .context("Failed to build HTTP client")?;
     let resp = client
         .get(url)
         .send()

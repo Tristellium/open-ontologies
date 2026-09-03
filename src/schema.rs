@@ -91,36 +91,49 @@ impl SchemaIntrospector {
 
         for table in tables {
             let class = Self::table_to_class(&table.name);
-            ttl.push_str(&format!("db:{} a owl:Class ;\n    rdfs:label \"{}\" .\n\n", class, class));
+            // The IRI-position identifier must be a valid Turtle PN_LOCAL;
+            // the human-readable form (pre-sanitization, escaped for safe
+            // literal embedding) is kept as the rdfs:label so nothing about
+            // the original name is lost (F-025 tranche-1 item 5 -- a table
+            // or column name containing a space, parenthesis, or double
+            // quote otherwise produced an invalid Turtle document and
+            // aborted the whole import; sanitize/escape at emission
+            // instead of failing closed on real-world identifiers).
+            let class_id = crate::mapping::sanitize_iri(&class);
+            let class_label = crate::mapping::escape_ntriples(&class);
+            ttl.push_str(&format!("db:{} a owl:Class ;\n    rdfs:label \"{}\" .\n\n", class_id, class_label));
 
             for col in &table.columns {
                 let prop_name = format!("{}_{}", table.name, col.name);
+                let prop_id = crate::mapping::sanitize_iri(&prop_name);
+                let col_label = crate::mapping::escape_ntriples(&col.name);
 
                 if let Some(fk) = fk_map.get(&(table.name.clone(), col.name.clone())) {
                     // Foreign key → ObjectProperty
                     let parent_class = Self::table_to_class(&fk.parent_table);
-                    ttl.push_str(&format!("db:{} a owl:ObjectProperty ;\n", prop_name));
-                    ttl.push_str(&format!("    rdfs:domain db:{} ;\n", class));
-                    ttl.push_str(&format!("    rdfs:range db:{} ;\n", parent_class));
-                    ttl.push_str(&format!("    rdfs:label \"{}\" .\n\n", col.name));
+                    let parent_class_id = crate::mapping::sanitize_iri(&parent_class);
+                    ttl.push_str(&format!("db:{} a owl:ObjectProperty ;\n", prop_id));
+                    ttl.push_str(&format!("    rdfs:domain db:{} ;\n", class_id));
+                    ttl.push_str(&format!("    rdfs:range db:{} ;\n", parent_class_id));
+                    ttl.push_str(&format!("    rdfs:label \"{}\" .\n\n", col_label));
                 } else {
                     // Regular column → DatatypeProperty
                     let xsd = Self::sql_to_xsd(&col.data_type);
                     if col.is_primary_key {
-                        ttl.push_str(&format!("db:{} a owl:DatatypeProperty , owl:FunctionalProperty ;\n", prop_name));
+                        ttl.push_str(&format!("db:{} a owl:DatatypeProperty , owl:FunctionalProperty ;\n", prop_id));
                     } else {
-                        ttl.push_str(&format!("db:{} a owl:DatatypeProperty ;\n", prop_name));
+                        ttl.push_str(&format!("db:{} a owl:DatatypeProperty ;\n", prop_id));
                     }
-                    ttl.push_str(&format!("    rdfs:domain db:{} ;\n", class));
+                    ttl.push_str(&format!("    rdfs:domain db:{} ;\n", class_id));
                     ttl.push_str(&format!("    rdfs:range {} ;\n", xsd));
-                    ttl.push_str(&format!("    rdfs:label \"{}\" .\n\n", col.name));
+                    ttl.push_str(&format!("    rdfs:label \"{}\" .\n\n", col_label));
                 }
 
                 // NOT NULL → cardinality restriction
                 if !col.is_nullable {
-                    ttl.push_str(&format!("db:{} rdfs:subClassOf [\n", class));
+                    ttl.push_str(&format!("db:{} rdfs:subClassOf [\n", class_id));
                     ttl.push_str("    a owl:Restriction ;\n");
-                    ttl.push_str(&format!("    owl:onProperty db:{} ;\n", prop_name));
+                    ttl.push_str(&format!("    owl:onProperty db:{} ;\n", prop_id));
                     ttl.push_str("    owl:minCardinality 1\n");
                     ttl.push_str("] .\n\n");
                 }
@@ -320,5 +333,103 @@ impl SchemaIntrospector {
         }
 
         Ok(tables)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graph::GraphStore;
+
+    // ─── F-025 tranche-1 item 5 / §5b: `import-schema` emits invalid ──────
+    // ─── Turtle for identifiers with spaces/parens ─────────────────────────
+    //
+    // Any column or table name containing a space or parenthesis (ubiquitous
+    // in real databases and anything imported from spreadsheets) was
+    // interpolated raw into a Turtle prefixed name (`db:{name}`), whose
+    // local part cannot contain them -- the generated document then failed
+    // the tool's own validation, and because `main.rs` builds ONE Turtle
+    // document for all tables and validates it before loading anything, one
+    // bad column aborted the whole import.
+
+    fn table_with_bad_column() -> TableInfo {
+        TableInfo {
+            name: "orders".to_string(),
+            columns: vec![
+                ColumnInfo {
+                    name: "id".to_string(),
+                    data_type: "integer".to_string(),
+                    is_nullable: false,
+                    is_primary_key: true,
+                },
+                ColumnInfo {
+                    name: "Latency (ms)".to_string(),
+                    data_type: "integer".to_string(),
+                    is_nullable: true,
+                    is_primary_key: false,
+                },
+            ],
+            foreign_keys: vec![],
+        }
+    }
+
+    #[test]
+    fn generated_turtle_with_a_parenthesised_column_name_parses_cleanly() {
+        let tables = vec![table_with_bad_column()];
+        let ttl = SchemaIntrospector::generate_turtle(&tables, "http://example.org/data/");
+
+        GraphStore::validate_turtle(&ttl).unwrap_or_else(|e| {
+            panic!("generate_turtle produced invalid Turtle for a column name \
+                    containing a space and parentheses: {e}\n---\n{ttl}")
+        });
+    }
+
+    #[test]
+    fn the_original_column_name_survives_as_a_label() {
+        let tables = vec![table_with_bad_column()];
+        let ttl = SchemaIntrospector::generate_turtle(&tables, "http://example.org/data/");
+        assert!(
+            ttl.contains(r#"rdfs:label "Latency (ms)""#),
+            "the original (readable) column name must be kept as an \
+             rdfs:label, sanitizing only the IRI-position identifier:\n{ttl}"
+        );
+    }
+
+    #[test]
+    fn a_table_name_with_a_space_also_parses_cleanly() {
+        let tables = vec![TableInfo {
+            name: "Order Items".to_string(),
+            columns: vec![ColumnInfo {
+                name: "id".to_string(),
+                data_type: "integer".to_string(),
+                is_nullable: false,
+                is_primary_key: true,
+            }],
+            foreign_keys: vec![],
+        }];
+        let ttl = SchemaIntrospector::generate_turtle(&tables, "http://example.org/data/");
+        GraphStore::validate_turtle(&ttl).unwrap_or_else(|e| {
+            panic!("generate_turtle produced invalid Turtle for a table name \
+                    containing a space: {e}\n---\n{ttl}")
+        });
+    }
+
+    #[test]
+    fn a_double_quote_in_a_name_does_not_break_the_label_literal() {
+        let tables = vec![TableInfo {
+            name: "widgets".to_string(),
+            columns: vec![ColumnInfo {
+                name: r#"size ("inches")"#.to_string(),
+                data_type: "integer".to_string(),
+                is_nullable: true,
+                is_primary_key: false,
+            }],
+            foreign_keys: vec![],
+        }];
+        let ttl = SchemaIntrospector::generate_turtle(&tables, "http://example.org/data/");
+        GraphStore::validate_turtle(&ttl).unwrap_or_else(|e| {
+            panic!("generate_turtle produced invalid Turtle for a column name \
+                    containing a double-quote: {e}\n---\n{ttl}")
+        });
     }
 }

@@ -206,6 +206,30 @@ impl OpenOntologiesServer {
     fn monitor(&self) -> crate::monitor::Monitor {
         crate::monitor::Monitor::new(self.db.clone(), self.graph.clone())
     }
+
+    /// Build an `AlignmentEngine` wired to the server's real vecstore when
+    /// the `embeddings` feature is compiled in, falling back to
+    /// `AlignmentEngine::new` (no embedding signal) otherwise.
+    ///
+    /// F-025 tranche-1 item 1: `onto_align` and `onto_align_feedback` both
+    /// used `AlignmentEngine::new` (`vecstore: None`) even though this
+    /// server already holds a live, populated `Arc<Mutex<VecStore>>`
+    /// (`self.vecstore`, constructed in `new_with_repo_options` with the
+    /// embeddings-fingerprint check already applied) -- the flagship
+    /// embedding signal was dead code on every MCP-facing alignment call.
+    #[cfg(feature = "embeddings")]
+    fn build_alignment_engine(&self) -> crate::align::AlignmentEngine {
+        crate::align::AlignmentEngine::new_with_vecstore(
+            self.db.clone(),
+            self.graph.clone(),
+            self.vecstore.clone(),
+        )
+    }
+
+    #[cfg(not(feature = "embeddings"))]
+    fn build_alignment_engine(&self) -> crate::align::AlignmentEngine {
+        crate::align::AlignmentEngine::new(self.db.clone(), self.graph.clone())
+    }
 }
 
 // ─── Tool definitions ───────────────────────────────────────────────────────
@@ -2353,7 +2377,7 @@ impl OpenOntologiesServer {
 
     #[tool(name = "onto_align", description = "Detect alignment candidates (owl:equivalentClass, skos:exactMatch, rdfs:subClassOf) between two ontologies using label similarity, property overlap, parent overlap, instance overlap, restriction patterns, and graph neighborhood. Auto-applies high-confidence matches above threshold.")]
     async fn onto_align(&self, Parameters(input): Parameters<OntoAlignInput>) -> String {
-        let engine = crate::align::AlignmentEngine::new(self.db.clone(), self.graph.clone());
+        let engine = self.build_alignment_engine();
 
         // Read source (file path or inline)
         let source = if std::path::Path::new(&input.source).exists() {
@@ -2403,7 +2427,7 @@ impl OpenOntologiesServer {
 
     #[tool(name = "onto_align_feedback", description = "Accept or reject an alignment candidate to improve future confidence scoring. Stores feedback in align_feedback table for self-calibrating weights.")]
     async fn onto_align_feedback(&self, Parameters(input): Parameters<OntoAlignFeedbackInput>) -> String {
-        let engine = crate::align::AlignmentEngine::new(self.db.clone(), self.graph.clone());
+        let engine = self.build_alignment_engine();
         match engine.record_feedback(&input.source_iri, &input.target_iri, "user_feedback", input.accepted, input.signals.as_ref()) {
             Ok(result) => {
                 self.lineage().record(&self.session_id, "AF", "align_feedback", if input.accepted { "accepted" } else { "rejected" });

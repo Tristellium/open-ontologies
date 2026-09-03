@@ -680,7 +680,17 @@ impl GraphStore {
     /// routinely published as `.owl`, so trusting the extension alone makes a
     /// perfectly valid file fail to parse. Sniff the first non-blank,
     /// non-comment line and let the content decide.
-    fn detect_format_sniffed(path: &str, content: &str) -> RdfFormat {
+    ///
+    /// `pub(crate)`: also called by `ontology.rs`'s lint path (with an empty
+    /// `path` hint, since lint operates on content that may not have a file
+    /// behind it) so `OntologyService::lint`/`lint_with_feedback` shares the
+    /// same content-sniffing every other read path already uses, instead of
+    /// hardcoding Turtle (F-025 tranche-1 item 4). An empty path hint is
+    /// safe here: every branch above the final `ext_format` fallback decides
+    /// purely from `content`, and the fallback itself already defaults to
+    /// Turtle for an unrecognised extension, which is the same assumption
+    /// `lint` made before this existed.
+    pub(crate) fn detect_format_sniffed(path: &str, content: &str) -> RdfFormat {
         let ext_format = Self::detect_format(path);
 
         let head = content

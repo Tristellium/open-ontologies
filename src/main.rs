@@ -791,6 +791,38 @@ fn setup(data_dir: &str) -> anyhow::Result<(StateDb, Arc<GraphStore>)> {
     Ok((db, graph))
 }
 
+/// Build an `AlignmentEngine` wired to the real on-disk vecstore when the
+/// `embeddings` feature is compiled in, falling back to `AlignmentEngine::new`
+/// (no embedding signal) otherwise.
+///
+/// F-025 tranche-1 item 1: `AlignmentEngine::new_with_vecstore` -- the
+/// engine's flagship embedding signal -- had zero production callers; every
+/// one of the four construction sites (this one covers the two CLI verbs,
+/// `align` and `align-feedback`; `server.rs` covers the two MCP tools) used
+/// `AlignmentEngine::new`, which hardcodes `vecstore: None`, so
+/// `embedding_sim` was 0.0 on every reachable path in a full-feature build.
+/// No fingerprint check here (unlike the server's long-running vecstore):
+/// a one-shot CLI command has no stale in-memory vectors to invalidate, so
+/// it simply reads whatever is on disk.
+#[cfg(feature = "embeddings")]
+fn build_alignment_engine(
+    db: StateDb,
+    graph: Arc<GraphStore>,
+) -> open_ontologies::align::AlignmentEngine {
+    let mut vs = open_ontologies::vecstore::VecStore::new(db.clone());
+    let _ = vs.load_from_db();
+    let vecstore = Arc::new(std::sync::Mutex::new(vs));
+    open_ontologies::align::AlignmentEngine::new_with_vecstore(db, graph, vecstore)
+}
+
+#[cfg(not(feature = "embeddings"))]
+fn build_alignment_engine(
+    db: StateDb,
+    graph: Arc<GraphStore>,
+) -> open_ontologies::align::AlignmentEngine {
+    open_ontologies::align::AlignmentEngine::new(db, graph)
+}
+
 /// False only when --human is passed without --json or --pretty; checked by
 /// output_json/output_result.
 static JSON_MODE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -2613,7 +2645,7 @@ async fn async_main() -> anyhow::Result<()> {
                 Some(ref t) => Some(std::fs::read_to_string(t)?),
                 None => None,
             };
-            let engine = open_ontologies::align::AlignmentEngine::new(db, graph);
+            let engine = build_alignment_engine(db, graph);
             let result = engine
                 .align(&source_ttl, target_ttl.as_deref(), min_confidence, dry_run)
                 .unwrap_or_else(|e| format!(r#"{{"error":"{}"}}"#, e));
@@ -2626,7 +2658,7 @@ async fn async_main() -> anyhow::Result<()> {
             reject,
         } => {
             let (db, graph) = setup(&cli.data_dir)?;
-            let engine = open_ontologies::align::AlignmentEngine::new(db, graph);
+            let engine = build_alignment_engine(db, graph);
             let accepted = accept || !reject;
             let result = engine
                 .record_feedback(&source, &target, "user_feedback", accepted, None)

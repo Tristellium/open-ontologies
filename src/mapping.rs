@@ -109,18 +109,32 @@ impl MappingConfig {
     }
 }
 
-/// Replace spaces and special characters that are invalid in IRIs with underscores.
-fn sanitize_iri(s: &str) -> String {
+/// Replace spaces and special characters that are invalid in IRIs (and, for
+/// `(` / `)` / `"`, invalid unescaped in a Turtle PN_LOCAL) with underscores.
+///
+/// `pub(crate)`: also used by `schema.rs` to sanitize SQL table/column
+/// identifiers before they are emitted as Turtle prefixed-name local parts
+/// (F-025 tranche-1 item 5 -- a column name containing a space, parenthesis,
+/// or double quote, ubiquitous in real databases and spreadsheet imports,
+/// otherwise produces an invalid predicate IRI and fails the whole import).
+pub(crate) fn sanitize_iri(s: &str) -> String {
     s.chars()
         .map(|c| match c {
-            ' ' | '<' | '>' | '{' | '}' | '|' | '\\' | '^' | '`' | '?' => '_',
+            ' ' | '<' | '>' | '{' | '}' | '|' | '\\' | '^' | '`' | '?' | '(' | ')' | '"' => '_',
             _ => c,
         })
         .collect()
 }
 
 /// Escape characters that are special in N-Triples string literals.
-fn escape_ntriples(s: &str) -> String {
+///
+/// `pub(crate)`: also used by `schema.rs` for the same reason as
+/// `sanitize_iri` above -- an `rdfs:label` literal built from a raw
+/// table/column name (e.g. containing a double-quote) otherwise breaks the
+/// Turtle string literal it is embedded in. Turtle short-string escaping
+/// (`"..."`) uses the same escapes as N-Triples for the characters this
+/// function handles.
+pub(crate) fn escape_ntriples(s: &str) -> String {
     s.chars()
         .flat_map(|c| match c {
             '\\' => vec!['\\', '\\'],
@@ -153,6 +167,14 @@ mod tests {
         assert_eq!(sanitize_iri("a<b>c"), "a_b_c");
         assert_eq!(sanitize_iri("no_change"), "no_change");
         assert_eq!(sanitize_iri("PEAK_OF_PERFECTION_?"), "PEAK_OF_PERFECTION__");
+    }
+
+    #[test]
+    fn test_sanitize_iri_parens() {
+        // F-025 tranche-1 item 5: a column name with parentheses (real-world
+        // spreadsheet exports, e.g. "Latency (ms)") must not survive raw
+        // into a Turtle prefixed-name local part.
+        assert_eq!(sanitize_iri("Latency (ms)"), "Latency__ms_");
     }
 
     #[test]
