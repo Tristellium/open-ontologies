@@ -198,6 +198,17 @@ impl ShaclValidator {
         // than errored, on any evaluator. Being unmutatable is the point of
         // it, so do not delete it for want of a reddening test.
         //
+        // `sh:prefixes` and `sh:declare` are whitelisted because they are
+        // prefix plumbing for `sh:sparql`, never constraints: they select and
+        // constrain no focus node. A shape's own `sh:prefixes` is read by
+        // `sparql_prologue` (step 5) for every `sh:sparql` constraint on it
+        // that names none of its own, and `sh:declare` is read there through
+        // `sh:prefixes`/`owl:imports*` or the whole-graph merge. Recording
+        // either as skipped turned a fired, prefixed SPARQL constraint into
+        // `conforms: null`: a false undetermined on a run that missed nothing.
+        // A prefix the query uses that no declaration binds still cannot read
+        // as a pass: the query fails to parse and lands in skipped in step 5.
+        //
         // `sh:ignoredProperties` is knowingly not exempt and is not
         // whitelisted. It modifies `sh:closed` rather than constraining
         // anything by itself, so wherever it has an effect the shape also
@@ -235,6 +246,7 @@ impl ShaclValidator {
                 FILTER(STRSTARTS(STR(?pred), "http://www.w3.org/ns/shacl#") && ?pred NOT IN (
                     sh:targetClass, sh:targetNode, sh:targetSubjectsOf,
                     sh:targetObjectsOf, sh:property, sh:sparql, sh:or,
+                    sh:prefixes, sh:declare,
                     sh:message, sh:severity, sh:name, sh:description,
                     sh:order, sh:group
                 )
@@ -1632,7 +1644,7 @@ impl ShaclValidator {
                 {
                     continue;
                 }
-                let prefix_block = match sparql_prologue(&shapes_store, constraint.get("c"))? {
+                let prefix_block = match sparql_prologue(&shapes_store, constraint.get("c"), &shape_node)? {
                     Prologue::Declarations(block) => block,
                     Prologue::Ambiguous(reason) => {
                         skipped.push(serde_json::json!({
@@ -2787,6 +2799,7 @@ enum Prologue {
 fn sparql_prologue(
     shapes_store: &Store,
     constraint_term: Option<&String>,
+    shape_node: &Term,
 ) -> anyhow::Result<Prologue> {
     let scoped = constraint_term.map(|c| {
         format!(
@@ -2806,6 +2819,27 @@ fn sparql_prologue(
         Some(q) => query_solutions(shapes_store, q)?,
         None => Vec::new(),
     };
+    // The constraint names no declarations of its own: use the ones the shape
+    // that owns it names, if any. Authors commonly put `sh:prefixes` on the
+    // node shape rather than on each `sh:sparql` node; the shape is bound as a
+    // term, not spliced, so a blank-node shape stays that shape.
+    if rows.is_empty() {
+        rows = query_solutions_bound(
+            shapes_store,
+            r#"
+            PREFIX sh: <http://www.w3.org/ns/shacl#>
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            SELECT DISTINCT ?shape ?prefix ?namespace WHERE {
+                ?shape sh:prefixes ?ont .
+                ?ont owl:imports* ?src .
+                ?src sh:declare ?decl .
+                ?decl sh:prefix ?prefix ; sh:namespace ?namespace .
+            }
+            "#,
+            "shape",
+            shape_node,
+        )?;
+    }
     // No `sh:prefixes`, or one that resolves to nothing: fall back to the whole
     // shapes graph, which is what every shapes file written against this engine
     // so far has relied on.
