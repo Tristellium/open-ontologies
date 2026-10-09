@@ -11,7 +11,7 @@ name = "open-ontologies"
 path = "src/main.rs"
 
 [dependencies]
-rmcp = { version = "1", features = ["server", "transport-io", "transport-streamable-http-server"] }
+rmcp = { version = "2", features = ["server", "transport-io", "transport-streamable-http-server"] }
 axum = "0.8"
 tower-http = { version = "0.6", features = ["cors"] }
 tokio-util = "0.7"
